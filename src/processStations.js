@@ -7,16 +7,17 @@ $scope.processStations = function(){
     var stationCount = $scope.lines[l].stations.length;
     var startCellX;
     var startCellY;
-    console.log($scope.lines[l].qText);
+
     var stationsDrawn = [];
     var currentStation = 0;
     var currentCheckpoint = 0;
+    var direction;
     stationsDrawn = [];
     //now we continue drawing the rest of the lines
     //find the first shared station that's already been drawn
     while(stationsDrawn.length < $scope.lines[l].stations.length){
       for (var c=currentCheckpoint;c<stationCount;c++){
-        if($scope.stations[$scope.lines[l].stations[c].qText].gridPosition){
+        if($scope.stations[$scope.lines[l].stations[c].qText].gridLoc){
           //we have a shared station
           currentStation = c;
           //stationsDrawn.push($scope.lines[l].stations[c].qText);
@@ -28,26 +29,50 @@ $scope.processStations = function(){
       }
       if(currentStation!=null){
         for (var s=currentStation;s>currentCheckpoint-1;s--){
-          if($scope.stations[$scope.lines[l].stations[s].qText].gridPosition){
-            //then this is also a shared station and already drawn so we do nothing
+          var newLoc, allocation;
+          var baseStation = $scope.stations[$scope.lines[l].stations[currentStation].qText].gridLoc;
+          var currLoc = $scope.stations[$scope.lines[l].stations[s].qText].gridLoc;
+          if(currLoc){
+            //this is a shared station, we'll compare it with the previous station to see what direction we're going in
+            //we don't need to take any other action on a share station
+            if($scope.lines[l].stations[s+1]){
+              var prevLoc = $scope.stations[$scope.lines[l].stations[s+1].qText].gridLoc;
+              if(prevLoc){
+                if(prevLoc.v == currLoc.v){
+                  //we're travelling horizontally
+                  direction = 4;  //left because we're counting down through the stations
+                }
+                else if(prevLoc.h == currLoc.h){
+                  //we're travelling vertically
+                  direction = prevLoc.v > currLoc.v ? 2 : 8;  //2=up, 8=down
+                }
+                else{
+                  //in theory we shouldn't get here because we're not drawing diagonal lines
+                  console.log('something went wrong');
+                }
+              }
+            }
             stationsDrawn.push($scope.lines[l].stations[s].qText);
           }
           else {
             //get the grid position of the last station
-            var currX = $scope.stations[$scope.lines[l].stations[s+1].qText].gridPosition.x;
-            var currY = $scope.stations[$scope.lines[l].stations[s+1].qText].gridPosition.y;
+            var prevLoc = $scope.stations[$scope.lines[l].stations[s+1].qText].gridLoc;
+            var h = prevLoc.h;
+            var v = prevLoc.v;
             //now use it to get the next position
-            var newPos = $scope.allocateGridPosition(currX, currY, -1);
-            $scope.allocateStation($scope.lines[l].stations[s], newPos.x, newPos.y);
-            $scope.pen.beginPath();
-            $scope.pen.strokeStyle = $scope.colours[l];
-            $scope.pen.fillStyle = "white";
-            $scope.pen.lineWidth = 3;
-            $scope.pen.arc(newPos.x, newPos.y, 1, 0, Math.PI * 2);
-            $scope.pen.stroke();
-            $scope.pen.fill()
+            direction = $scope.allocateGridPosition(h, v, $scope.stations[$scope.lines[l].stations[s].qText], -1, direction);
+            //$scope.allocateStation($scope.lines[l].stations[s], newLoc);
             stationsDrawn.push($scope.lines[l].stations[s].qText);
           }
+          // $scope.pen.beginPath();
+          // $scope.pen.strokeStyle = $scope.colours[l];
+          // $scope.pen.fillStyle = $scope.colours[l];
+          // //$scope.pen.rect(newLoc.locs.a.x, newLoc.locs.a.y, $scope.cellWidth, $scope.cellHeight);
+          // //$scope.pen.lineWidth = 3;
+          // $scope.pen.arc(newLoc.center.x, newLoc.center.y, 5, 0, Math.PI * 2);
+          // //$scope.pen.stroke();
+          // $scope.pen.fill()
+
         }
         currentCheckpoint = currentStation+1;
       }
@@ -55,18 +80,29 @@ $scope.processStations = function(){
         //there were no shared stations that have been drawn, so we start from the current checkpoint and work upwards
         for(var i=currentCheckpoint;i<$scope.lines[l].stations.length;i++){
           if(i==0){
-            //then there are no shared stationsDrawn
-            //we should draw this line at mid points between the y axis cells
-            var currX = $scope.cellWidth;	//this puts it in the first x axis cell
-            console.log('we got here but nothing is going to happen');
+            //we're on a new line with no shared stations
+            var y = $scope.getFreeY(0);
+            direction = $scope.allocateGridPosition(0,y, $scope.lines[l].stations[i], 1, 6);
+            // $scope.allocateStation($scope.lines[l].stations[i], newLoc);
+            // $scope.pen.beginPath();
+            // $scope.pen.fillStyle = $scope.colours[l];
+            // //$scope.pen.rect(newLoc.locs.a.x, newLoc.locs.a.y, $scope.cellWidth, $scope.cellHeight);
+            // $scope.pen.arc(newLoc.center.x, newLoc.center.y, 5, 0, Math.PI * 2);
+            // $scope.pen.fill()
+            stationsDrawn.push($scope.lines[l].stations[i].qText);
           }
           else {
             //get the grid position of the last station
-            var currX = $scope.stations[$scope.lines[l].stations[i-1].qText].gridPosition.x;
-            var currY = $scope.stations[$scope.lines[l].stations[i-1].qText].gridPosition.y;
+            var h = $scope.stations[$scope.lines[l].stations[i-1].qText].gridLoc.h;
+            var v = $scope.stations[$scope.lines[l].stations[i-1].qText].gridLoc.v;
             //now use it to get the next position
-            var newPos = $scope.allocateGridPosition(currX, currY, 1);
-            $scope.allocateStation($scope.lines[l].stations[i], newPos.x, newPos.y);
+            direction = $scope.allocateGridPosition(h, v, $scope.stations[$scope.lines[l].stations[i].qText], 1, 6);
+            // $scope.allocateStation($scope.lines[l].stations[i], newLoc);
+            // $scope.pen.beginPath();
+            // $scope.pen.fillStyle = $scope.colours[l];
+            // //$scope.pen.rect(newLoc.locs.a.x, newLoc.locs.a.y, $scope.cellWidth, $scope.cellHeight);
+            // $scope.pen.arc(newLoc.center.x, newLoc.center.y, 5, 0, Math.PI * 2);
+            // $scope.pen.fill()
             stationsDrawn.push($scope.lines[l].stations[i].qText);
           }
         }
