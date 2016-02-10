@@ -4,6 +4,7 @@ define( ["jquery"], function ( $ ) {
 	return {
 		initialProperties: {
 			qHyperCubeDef: {
+				qStateName: "tube",
 				qDimensions: [],
 				qMeasures: [],
 				qInitialDataFetch: [{
@@ -19,13 +20,11 @@ define( ["jquery"], function ( $ ) {
 			items: {
 				dimensions: {
 					uses: "dimensions",
-					min: 2,
-					max: 2
+					min: 2
 				},
 				measures: {
 					uses: "measures",
-					min: 1,
-					max: 1
+					min: 0
 				},
 				sorting: {
 					uses: "sorting"
@@ -39,61 +38,32 @@ define( ["jquery"], function ( $ ) {
 			canTakeSnapshot: true
 		},
 		controller: function($scope, $element){
-			$scope.debug = true;
-			//properties that control the hypercube page height
-			$scope.pageHeight = 100;
-			//properties that control how the canvas is drawn
-			$scope.pen;
-			$scope.padding = 30;
-			$scope.gridSize = 20;
-			$scope.stationRadius = 7;
-			$scope.lineWidth = 7;
-			$scope.lineSpacing = 14;
-			$scope.paperWidth;
-			$scope.paperHeight;
-			$scope.gridWidth;
-			$scope.gridHeight;
-			$scope.cellWidth;
-			$scope.cellHeight;
-			$scope.dominentAxis;
-			$scope.allocatedCells = {
-				x:{},
-				y:{}
-			};
-			$scope.firstStationColour = "#62A74A";
-			//colour array for drawing the lines
-			$scope.colours = [
-				"#EE5A35",
-				"#4591BA",
-				"green",
-				"yellow",
-				"pink"
-			];
-			//object to store the line definitions
-			$scope.lines = [];
-			//object to store the station definitions
-			$scope.stations = {};
 			//function to download all of the hypercube data
 			$scope.downloadHypercubeData = function(callbackFn){
-			  var lastrow = 0;
-			  for (var i=0;i< $scope.$parent.layout.qHyperCube.qDataPages.length;i++){
-			    lastrow += $scope.$parent.layout.qHyperCube.qDataPages[i].qArea.qHeight;
+			  if(!$scope.lastrow){
+			    $scope.lastrow = 0;
 			  }
-			  var requestPage = [{
-			    qTop: lastrow,
-			    qLeft: 0,
-			    qWidth: 3, //should be # of columns
-			    qHeight: Math.min( $scope.pageHeight, $scope.backendApi.getRowCount() - lastrow )
-			  }];
-			  $scope.backendApi.getData( requestPage ).then( function ( dataPages ) {
-			    lastrow += dataPages[0].qArea.qHeight;
-			    if(lastrow < $scope.backendApi.getRowCount()){
-			      $scope.downloadHypercubeData(callbackFn);
+			  var totalRows = $scope.backendApi.getRowCount()
+			  if($scope.lastrow != totalRows){
+			    for (var i=0;i< $scope.$parent.layout.qHyperCube.qDataPages.length;i++){
+			      $scope.lastrow += $scope.$parent.layout.qHyperCube.qDataPages[i].qArea.qHeight;
 			    }
-			    else {
-			      callbackFn.call(null);
-			    }
-			  } );
+			    var requestPage = [{
+			      qTop: $scope.lastrow,
+			      qLeft: 0,
+			      qWidth: 3, //should be # of columns
+			      qHeight: Math.min( $scope.pageHeight, totalRows - $scope.lastrow )
+			    }];
+			    $scope.backendApi.getData( requestPage ).then( function ( dataPages ) {
+			      $scope.lastrow += dataPages[0].qArea.qHeight;
+			      if($scope.lastrow < totalRows){
+			        $scope.downloadHypercubeData(callbackFn);
+			      }
+			      else {
+			        callbackFn.call(null);
+			      }
+			    } );
+			  }
 			};
 
 			//function to restructure the hypercube data
@@ -103,6 +73,9 @@ define( ["jquery"], function ( $ ) {
 			  var linesLoaded = [];
 			  var stations = {};
 			  var dimensions = $scope.layout.qHyperCube.qDimensionInfo;
+			  var lineField = dimensions[0].qFallbackTitle;
+			  var stationField = dimensions[1].qFallbackTitle;
+
 			  for(var i=0;i<$scope.layout.qHyperCube.qDataPages.length;i++){
 			    var matrix = $scope.layout.qHyperCube.qDataPages[i].qMatrix;
 			    matrix.forEach(function ( row ) {
@@ -121,15 +94,22 @@ define( ["jquery"], function ( $ ) {
 			      line.stations.push(row[1]);
 			    } );
 			  }
-
+			  console.log($scope.selections);
 			  //for each line, establish the number of shared stations
 			  for (var l in $scope.lines){
 			    var sharedStationCount = 0;
 			    var sharedStations = [];
+			    if($scope.selections[lineField] && $scope.selections[lineField][$scope.lines[l].qText]){
+			      $scope.lines[l].qState = $scope.selections[lineField][$scope.lines[l].qText];
+			    }
 			    for (var l2 in $scope.lines){
 			      if($scope.lines[l].qText != $scope.lines[l2].qText){
 			        //no need for a line to check against itself
 			        for(var lS in $scope.lines[l].stations){
+			          if($scope.selections[stationField] && $scope.selections[stationField][$scope.lines[l].stations[lS].qText]){
+			            $scope.lines[l].stations[lS].qState = $scope.selections[stationField][$scope.lines[l].stations[lS].qText];
+			          }
+			          console.log($scope.lines[l].stations[lS].qText," - ",$scope.lines[l].stations[lS].qState);
 			          if(!$scope.stations[$scope.lines[l].stations[lS].qText]){
 			            $scope.stations[$scope.lines[l].stations[lS].qText] = {lines:[$scope.lines[l].qText], linesDrawn:0};
 			          }
@@ -156,26 +136,6 @@ define( ["jquery"], function ( $ ) {
 			      $scope.stations[s].lineCount = 1;
 			    }
 			  }
-			  //sort the lines by the number of shared stations
-			  $scope.lines.sort(function(a,b){
-			    if(a.sharedStationCount > b.sharedStationCount){
-			      return -1;
-			    }
-			    else if (a.sharedStationCount == b.sharedStationCount) {
-			      if(a.stations.length > b.stations.length){
-			        return -1;
-			      }
-			      else {
-			        return 1;
-			      }
-			    }
-			    else {
-			      return 1;
-			    }
-			  });
-			  $scope.gridSize = $scope.lines[0].stations.length + 4;  //sets the grid to be the length of the longest line with the most shared stations + 4 for padding
-			  console.log($scope.lines);
-			  console.log($scope.stations);
 			};
 
       //function to assign grid positions to each station and draw them
@@ -187,16 +147,17 @@ define( ["jquery"], function ( $ ) {
           var stationCount = $scope.lines[l].stations.length;
           var startCellX;
           var startCellY;
-          console.log($scope.lines[l].qText);
+
           var stationsDrawn = [];
           var currentStation = 0;
           var currentCheckpoint = 0;
+          var direction;
           stationsDrawn = [];
           //now we continue drawing the rest of the lines
           //find the first shared station that's already been drawn
           while(stationsDrawn.length < $scope.lines[l].stations.length){
             for (var c=currentCheckpoint;c<stationCount;c++){
-              if($scope.stations[$scope.lines[l].stations[c].qText].gridPosition){
+              if($scope.stations[$scope.lines[l].stations[c].qText].gridLoc){
                 //we have a shared station
                 currentStation = c;
                 //stationsDrawn.push($scope.lines[l].stations[c].qText);
@@ -208,26 +169,50 @@ define( ["jquery"], function ( $ ) {
             }
             if(currentStation!=null){
               for (var s=currentStation;s>currentCheckpoint-1;s--){
-                if($scope.stations[$scope.lines[l].stations[s].qText].gridPosition){
-                  //then this is also a shared station and already drawn so we do nothing
+                var newLoc, allocation;
+                var baseStation = $scope.stations[$scope.lines[l].stations[currentStation].qText].gridLoc;
+                var currLoc = $scope.stations[$scope.lines[l].stations[s].qText].gridLoc;
+                if(currLoc){
+                  //this is a shared station, we'll compare it with the previous station to see what direction we're going in
+                  //we don't need to take any other action on a share station
+                  if($scope.lines[l].stations[s+1]){
+                    var prevLoc = $scope.stations[$scope.lines[l].stations[s+1].qText].gridLoc;
+                    if(prevLoc){
+                      if(prevLoc.v == currLoc.v){
+                        //we're travelling horizontally
+                        direction = 4;  //left because we're counting down through the stations
+                      }
+                      else if(prevLoc.h == currLoc.h){
+                        //we're travelling vertically
+                        direction = prevLoc.v > currLoc.v ? 2 : 8;  //2=up, 8=down
+                      }
+                      else{
+                        //in theory we shouldn't get here because we're not drawing diagonal lines
+                        console.log('something went wrong');
+                      }
+                    }
+                  }
                   stationsDrawn.push($scope.lines[l].stations[s].qText);
                 }
                 else {
                   //get the grid position of the last station
-                  var currX = $scope.stations[$scope.lines[l].stations[s+1].qText].gridPosition.x;
-                  var currY = $scope.stations[$scope.lines[l].stations[s+1].qText].gridPosition.y;
+                  var prevLoc = $scope.stations[$scope.lines[l].stations[s+1].qText].gridLoc;
+                  var h = prevLoc.h;
+                  var v = prevLoc.v;
                   //now use it to get the next position
-                  var newPos = $scope.allocateGridPosition(currX, currY, -1);
-                  $scope.allocateStation($scope.lines[l].stations[s], newPos.x, newPos.y);
-                  $scope.pen.beginPath();
-                  $scope.pen.strokeStyle = $scope.colours[l];
-                  $scope.pen.fillStyle = "white";
-                  $scope.pen.lineWidth = 3;
-                  $scope.pen.arc(newPos.x, newPos.y, 1, 0, Math.PI * 2);
-                  $scope.pen.stroke();
-                  $scope.pen.fill()
+                  direction = $scope.allocateGridPosition(h, v, $scope.stations[$scope.lines[l].stations[s].qText], -1, direction);
+                  //$scope.allocateStation($scope.lines[l].stations[s], newLoc);
                   stationsDrawn.push($scope.lines[l].stations[s].qText);
                 }
+                // $scope.pen.beginPath();
+                // $scope.pen.strokeStyle = $scope.colours[l];
+                // $scope.pen.fillStyle = $scope.colours[l];
+                // //$scope.pen.rect(newLoc.locs.a.x, newLoc.locs.a.y, $scope.cellWidth, $scope.cellHeight);
+                // //$scope.pen.lineWidth = 3;
+                // $scope.pen.arc(newLoc.center.x, newLoc.center.y, 5, 0, Math.PI * 2);
+                // //$scope.pen.stroke();
+                // $scope.pen.fill()
+
               }
               currentCheckpoint = currentStation+1;
             }
@@ -235,18 +220,29 @@ define( ["jquery"], function ( $ ) {
               //there were no shared stations that have been drawn, so we start from the current checkpoint and work upwards
               for(var i=currentCheckpoint;i<$scope.lines[l].stations.length;i++){
                 if(i==0){
-                  //then there are no shared stationsDrawn
-                  //we should draw this line at mid points between the y axis cells
-                  var currX = $scope.cellWidth;	//this puts it in the first x axis cell
-                  console.log('we got here but nothing is going to happen');
+                  //we're on a new line with no shared stations
+                  var y = $scope.getFreeY(0);
+                  direction = $scope.allocateGridPosition(0,y, $scope.lines[l].stations[i], 1, 6);
+                  // $scope.allocateStation($scope.lines[l].stations[i], newLoc);
+                  // $scope.pen.beginPath();
+                  // $scope.pen.fillStyle = $scope.colours[l];
+                  // //$scope.pen.rect(newLoc.locs.a.x, newLoc.locs.a.y, $scope.cellWidth, $scope.cellHeight);
+                  // $scope.pen.arc(newLoc.center.x, newLoc.center.y, 5, 0, Math.PI * 2);
+                  // $scope.pen.fill()
+                  stationsDrawn.push($scope.lines[l].stations[i].qText);
                 }
                 else {
                   //get the grid position of the last station
-                  var currX = $scope.stations[$scope.lines[l].stations[i-1].qText].gridPosition.x;
-                  var currY = $scope.stations[$scope.lines[l].stations[i-1].qText].gridPosition.y;
+                  var h = $scope.stations[$scope.lines[l].stations[i-1].qText].gridLoc.h;
+                  var v = $scope.stations[$scope.lines[l].stations[i-1].qText].gridLoc.v;
                   //now use it to get the next position
-                  var newPos = $scope.allocateGridPosition(currX, currY, 1);
-                  $scope.allocateStation($scope.lines[l].stations[i], newPos.x, newPos.y);
+                  direction = $scope.allocateGridPosition(h, v, $scope.stations[$scope.lines[l].stations[i].qText], 1, 6);
+                  // $scope.allocateStation($scope.lines[l].stations[i], newLoc);
+                  // $scope.pen.beginPath();
+                  // $scope.pen.fillStyle = $scope.colours[l];
+                  // //$scope.pen.rect(newLoc.locs.a.x, newLoc.locs.a.y, $scope.cellWidth, $scope.cellHeight);
+                  // $scope.pen.arc(newLoc.center.x, newLoc.center.y, 5, 0, Math.PI * 2);
+                  // $scope.pen.fill()
                   stationsDrawn.push($scope.lines[l].stations[i].qText);
                 }
               }
@@ -256,68 +252,61 @@ define( ["jquery"], function ( $ ) {
         }
       };
 
-      $scope.allocateStation = function(station, x, y){
-        if(!$scope.allocatedCells[x]){
-          $scope.allocatedCells[x] = {};
-        }
-        $scope.allocatedCells[x][y] = true;
-        $scope.stations[station.qText].gridPosition = {
-          x: x,
-          y: y
-        };
-        station.gridPosition = {
-          x: x,
-          y: y
-        };
+      $scope.allocateStation = function(station, loc){
+        loc.occupied = true;
+        loc.item = "station";
+        $scope.stations[station.qText].gridLoc = loc;
+        station.gridLoc = loc;
         console.log('allocating grid position');
       }
 
       $scope.processFirstLine = function(){
         //this plots the points for the first line.
         //the first line is the one with the most shared stations
-        //which we draw diagonally (with a nose and tail) to set a baseline
-        //or if the line is bigger than our gridsize + 4 then we draw it in a circular formation
+        //which we draw diagonally to set a baseline
         var stationCount = $scope.lines[0].stations.length;
-        var startCellX;
-        var startCellY;
-        if($scope.lines[0].stations.length > ($scope.gridSize+4)){
-          //we should draw the line centrally to the grid in a circular formation
+        var startCellX, startCellY, startPixelY, gridLoc;
 
-        }
-        else{
-          //we should draw this line centrally to the grid in a diagonal formation
-          //find the starting x cell by
-          startCellX = Math.floor((($scope.gridSize)-stationCount)/2);
-          startCellY = Math.floor(($scope.gridSize-(stationCount))/2);
-          //draw the first part of the line
-          //$scope.pen.moveTo((startCellX*cellWidth), (startCellY*cellHeight));
-          for (var s=0;s<stationCount;s++){
-            //the first and last station links are horizontal, the rest are diagonal
-            $scope.lines[0].stations[s].gridPosition = {x: startCellX * $scope.cellWidth, y: startCellY* $scope.cellHeight};
-            $scope.stations[$scope.lines[0].stations[s].qText].gridPosition = $scope.lines[0].stations[s].gridPosition;
-            var station = $scope.lines[0].stations[s];
-            if(!$scope.allocatedCells[station.gridPosition.x]){
-              $scope.allocatedCells[station.gridPosition.x] = {
+        //we should draw this line centrally to the grid horizontally
+
+        //before understanding where the first station can go we need to understand how much room the label needs
+        var label = $scope.stations[$scope.lines[0].stations[0].qText].label;
+        startCellX = 0;
+        startCellY = Math.ceil($scope.gridSize.y/2);
+
+        //draw the first part of the line
+        for (var s=0;s<stationCount;s++){
+          //based on the width of the label mark the relevant cells unusable
+          for(var i=0;i<label.hCount+1;i++){
+            $scope.useCell(startCellX+i,startCellY, "blocked");
+          }
+
+          $scope.useCell(startCellX, startCellY, "station");
+          gridLoc = $scope.grid[startCellX][startCellY];
+          $scope.lines[0].stations[s].gridLoc = gridLoc;
+          $scope.stations[$scope.lines[0].stations[s].qText].gridLoc = gridLoc
+          var label = $scope.stations[$scope.lines[0].stations[s].qText].label;
+
+          //allocate the position for the station label starting 1 cell immediately up and right of the station
+          var labelY = startCellY-1, labelX = startCellX+1;
+          for(var v=0;v<label.vCount;v++){
+            for(var h=0;h<label.hCount;h++){
+              if(v==0&&h==0){
+                $scope.stations[$scope.lines[0].stations[s].qText].labelLoc = $scope.grid[labelX][labelY];
               }
-              $scope.allocatedCells[station.gridPosition.x][station.gridPosition.y] = true;
+              $scope.useCell(labelX+h,labelY-v, "label");
             }
-            $scope.pen.beginPath();
-            $scope.pen.moveTo(station.gridPosition.x, station.gridPosition.y);
-            //$scope.pen.strokeStyle = station.qState!="X"?colours[l]:"#E2E2E2";
-            //$scope.pen.lineWidth = lineWidth;
-            $scope.pen.strokeStyle = "black";
-            $scope.pen.fillStyle = "white";
-            $scope.pen.lineWidth = 3;
+          }
+          var station = $scope.lines[0].stations[s];
 
-              startCellX++;
-              startCellY++;
+          //now we move to what would effectively be the end of the label
+          startCellX += label.hCount+1;
 
-            if(s<stationCount){
-              //$scope.pen.lineTo(startCellX * cellWidth, startCellY* cellHeight);
-              $scope.pen.arc(station.gridPosition.x, station.gridPosition.y, 1, 0, Math.PI * 2);
-              $scope.pen.stroke();
-              $scope.pen.fill()
-            }
+          if(s<stationCount){
+            //$scope.pen.lineTo(startCellX * cellWidth, startCellY* cellHeight);
+            // $scope.pen.arc(station.gridPosition.x, station.gridPosition.y, 1, 0, Math.PI * 2);
+            // $scope.pen.stroke();
+            // $scope.pen.fill()
           }
         }
       };
@@ -327,19 +316,19 @@ define( ["jquery"], function ( $ ) {
         var currX, currY, newX, newY, adjustmentX, adjustmentY;
         for (var l in $scope.lines){
           var stations = $scope.lines[l].stations;
-          currX = $scope.stations[stations[0].qText].gridPosition.x;
-          currY = $scope.stations[stations[0].qText].gridPosition.y;
+          currX = $scope.stations[stations[0].qText].gridLoc.center.x;
+          currY = $scope.stations[stations[0].qText].gridLoc.center.y;
           adjustmentX = 0;
           adjustmentY = 0;
           for (var i=0;i<stations.length;i++){
             $scope.pen.beginPath();
             //check to see if this and the next station are shared
-            if($scope.stations[stations[i].qText].lines.length > 1 && ($scope.stations[stations[i+1].qText] && $scope.stations[stations[i+1].qText].lines.length>1)){
+            if($scope.stations[stations[i].qText].lines.length > 1 && stations[i+1] && ($scope.stations[stations[i+1].qText] && $scope.stations[stations[i+1].qText].lines.length>1)){
               $scope.pen.moveTo((currX+adjustmentX), (currY-adjustmentY));
-              if($scope.stations[stations[i].qText].gridPosition.x != $scope.stations[stations[i+1].qText].gridPosition.x){
+              if($scope.stations[stations[i].qText].gridLoc.center.x != $scope.stations[stations[i+1].qText].gridLoc.center.x){
                 //the 2 stations do not run vertically so we can adjust the Y axis
                 adjustmentY = ($scope.lineSpacing * $scope.stations[stations[i].qText].linesDrawn);
-                if($scope.stations[stations[i].qText].gridPosition.y != $scope.stations[stations[i+1].qText].gridPosition.y){
+                if($scope.stations[stations[i].qText].gridLoc.center.y != $scope.stations[stations[i+1].qText].gridLoc.center.y){
                   //the 2 stations do not run horizontally either so we adjust both axis
                   adjustmentX = (($scope.lineSpacing/2) * $scope.stations[stations[i].qText].linesDrawn);
                 }
@@ -347,7 +336,7 @@ define( ["jquery"], function ( $ ) {
               else{
                 //we shift to the right
                 adjustmentX = ($scope.lineSpacing * $scope.stations[stations[i].qText].linesDrawn);
-                if($scope.stations[stations[i].qText].gridPosition.x != $scope.stations[stations[i+1].qText].gridPosition.x){
+                if($scope.stations[stations[i].qText].gridLoc.center.x != $scope.stations[stations[i+1].qText].gridLoc.center.x){
                   //we shift to the right
                   adjustmentY = ($scope.lineSpacing * $scope.stations[stations[i].qText].linesDrawn);
                 }
@@ -359,15 +348,15 @@ define( ["jquery"], function ( $ ) {
               $scope.stations[stations[i].qText].linesDrawn++;
               //$scope.pen.moveTo((currX+adjustmentX), (currY-adjustmentY));
             }
-            else if($scope.stations[stations[i].qText].lines.length > 1 && ($scope.stations[stations[i+1].qText] && $scope.stations[stations[i+1].qText].lines.length==1)){
+            else if($scope.stations[stations[i].qText].lines.length > 1 && stations[i+1] && ($scope.stations[stations[i+1].qText] && $scope.stations[stations[i+1].qText].lines.length==1)){
               $scope.pen.moveTo((currX+adjustmentX), (currY-adjustmentY));
-              if($scope.stations[stations[i].qText].gridPosition.x != $scope.stations[stations[i+1].qText].gridPosition.x){
+              if($scope.stations[stations[i].qText].gridLoc.center.x != $scope.stations[stations[i+1].qText].gridLoc.center.x){
                 //the 2 stations do not run vertically so we can reset the Y adjustment
                 adjustmentX += adjustmentY;
                 adjustmentY = 0;
                 //adjustmentX += ($scope.lineWidth*$scope.stations[stations[i].qText].linesDrawn);
               }
-              if($scope.stations[stations[i].qText].gridPosition.y != $scope.stations[stations[i+1].qText].gridPosition.y){
+              if($scope.stations[stations[i].qText].gridLoc.center.y != $scope.stations[stations[i+1].qText].gridLoc.center.y){
                 //the 2 stations do not run vertically so we can reset the X adjustment
                 adjustmentY += adjustmentX;
                 adjustmentX = 0;
@@ -380,18 +369,18 @@ define( ["jquery"], function ( $ ) {
             }
 
             $scope.pen.moveTo((currX+adjustmentX), (currY-adjustmentY));
-            $scope.lines[l].stations[i].gridPosition = {
-              x: (currX+adjustmentX),
-              y: (currY+adjustmentY)
-            };
-            $scope.pen.strokeStyle = stations[i].qState!="X"?$scope.colours[l]:"#E2E2E2";
+            // $scope.stations[$scope.lines[l].stations[i].qText].gridLoc.center = {
+            //   x: (currX+adjustmentX),
+            //   y: (currY+adjustmentY)
+            // };
+            $scope.pen.strokeStyle = $scope.colours[l];
             $scope.pen.lineWidth = $scope.lineWidth;
             $scope.pen.lineJoin = 'round';
             $scope.pen.lineCap = 'round';
 
             if(stations[i+1]){
-              currX = $scope.stations[stations[i+1].qText].gridPosition.x;
-              currY = $scope.stations[stations[i+1].qText].gridPosition.y;
+              currX = $scope.stations[stations[i+1].qText].gridLoc.center.x;
+              currY = $scope.stations[stations[i+1].qText].gridLoc.center.y;
 
               $scope.pen.lineTo((currX+adjustmentX), (currY-adjustmentY));
               $scope.pen.stroke();
@@ -401,36 +390,78 @@ define( ["jquery"], function ( $ ) {
       };
 
       $scope.drawStations = function(){
-        for(var l in $scope.lines){
+        for(var l=0; l<$scope.lines.length;l++){
           for(var i=0; i<$scope.lines[l].stations.length;i++){
-            var x = $scope.lines[l].stations[i].gridPosition.x;
-            var y = $scope.lines[l].stations[i].gridPosition.y;
+            if($scope.stations[$scope.lines[l].stations[i].qText].gridLoc){
+              var x = $scope.stations[$scope.lines[l].stations[i].qText].gridLoc.center.x;
+              var y = $scope.stations[$scope.lines[l].stations[i].qText].gridLoc.center.y;
 
-            $scope.pen.beginPath();
-            $scope.pen.moveTo(x,y);
+              $scope.pen.beginPath();
+              $scope.pen.moveTo(x,y);
 
-            $scope.pen.strokeStyle = "black";
-            $scope.pen.fillStyle = "white";
-            $scope.pen.lineWidth = 3;
+              $scope.pen.strokeStyle = "black";
+              $scope.pen.lineWidth = 6;
+              var qState = $scope.lines[l].stations[i].qState;
+              $scope.pen.fillStyle = "white";
 
-            $scope.pen.arc(x, y, $scope.stationRadius, 0, Math.PI * 2);
-            $scope.pen.stroke();
-            $scope.pen.fill()
+              $scope.pen.arc(x, y, $scope.stationRadius, 0, Math.PI * 2);
+              $scope.pen.stroke();
+              $scope.pen.fill()
+            }
           }
         }
       };
 
+			$scope.drawLabels = function(){
+			  for(var s in $scope.stations){
+			    if($scope.stations[s].labelLoc){
+			        var x = $scope.stations[s].labelLoc.center.x;
+			        var y = $scope.stations[s].labelLoc.center.y;        
+			        var textX = 0, textY = 0;
+			        $scope.pen.save()
+			        $scope.pen.beginPath();
+			        //$scope.pen.moveTo(x,y);
+			        $scope.pen.textAlign = "left";
+			        $scope.pen.textBaseline = "middle";
+			        $scope.pen.fillStyle = "black";
+			        $scope.pen.translate(x, y);
+			        $scope.pen.rotate(-45*Math.PI / 180);
+
+			        for(var i=0;i<$scope.stations[s].label.lines.length;i++){
+			          $scope.pen.fillText($scope.stations[s].label.lines[i], textX, textY);
+			          textY+= $scope.labelLineHeight;
+			        }
+			        //$scope.pen.fillStyle = "white";
+			        //$scope.pen.lineWidth = 3;
+
+			        //$scope.pen.arc(x, y, $scope.stationRadius, 0, Math.PI * 2);
+			        //$scope.pen.stroke();
+			        $scope.pen.fill()
+			        $scope.pen.restore()
+			    }
+			  }
+			};
+
       //debug function to draw the grid
       $scope.drawGrid = function(){
         var currX = 0, currY = 0;
-        //draw the grid (debugging only)
-        //we want a maximum of 10 possible stations across both axis
-        //but we should have 20 grid cells to work with
+        var gridCount = 0;
+        var cellWidth = $scope.cellWidth, cellHeight = $scope.cellHeight;
+        //draw the grid (debugging only) and calculate the cell structure
         $scope.pen.beginPath();
         $scope.pen.strokeStyle = "#E2E2E2";
-        for (var i=0; i<$scope.gridSize; i++){
-          for(var j=0; j<($scope.gridSize); j++){
-            $scope.pen.rect(currX, currY, $scope.cellWidth, $scope.cellHeight);
+        for (var i=0; i<$scope.gridSize.y; i++){
+          for(var j=0; j<$scope.gridSize.x; j++){
+            gridCount++;
+            if($scope.debug){
+              $scope.pen.rect(currX, currY, $scope.cellWidth, $scope.cellHeight);
+            }
+            if(!$scope.grid[j]){
+              $scope.grid[j] = {};
+            }
+            if(!$scope.grid[j][i]){
+              $scope.createNewGridCell(j, i);
+            }
             currX += $scope.cellWidth;
           }
           currX = 0;
@@ -439,131 +470,530 @@ define( ["jquery"], function ( $ ) {
         $scope.pen.stroke();
       };
 
+      $scope.createNewGridCell = function(x, y){
+        var h = x, v = y;
+        var cellWidth = $scope.cellWidth, cellHeight = $scope.cellHeight;
+        x = x*cellWidth, y=y*cellHeight;
+        $scope.grid[h][v] = {
+          center: {x: x+(cellWidth/2), y: y+(cellHeight/2)},
+          h: h,
+          v: v,
+          locs: {
+            a: {x: x, y: y},
+            b: {x: x+(cellWidth/2), y: y},
+            c: {x: x+cellWidth, y: y},
+            d: {x: x, y: y+(cellHeight/2)},
+            e: {x: x+(cellWidth/2), y: y+(cellHeight/2)},
+            f: {x: x+(cellWidth), y: y+(cellHeight/2)},
+            g: {x: x, y: y+cellHeight},
+            h: {x: x+(cellWidth/2), y: y+cellHeight},
+            i: {x: x+(cellWidth), y: y+cellHeight},
+          },
+          occupied: false,
+          item: null
+        };
+      };
+
       //function to allocate the grid position for the current station
-      $scope.allocateGridPosition = function(x, y, direction){
-        //direction is either positive or negative
-        //a positive value means the station should be progressing to the right and potentially up/down
-        //a negative value means the station should be progressing to the left and potentially up/down
-        //we search for a new cell in a semi-circular motion incrementing by 1 cell each pass
-        var validAllocation = false;
-        var iteration = 0;
-        var newPos = {};
-        //x = (x*direction);
-        while (!validAllocation) {
-          //can we move left/right
-          if(!$scope.allocatedCells[(x+($scope.cellWidth*iteration))] || !$scope.allocatedCells[(x+($scope.cellWidth*iteration))][y]){
-            newPos = {
-              x: (x+($scope.cellWidth*iteration)),
-              y: y
-            };
-            validAllocation = true;
-            return newPos;
+      $scope.allocateGridPosition = function(x, y, station, progression, direction){
+        //when allocating a grid position for a station we need to accommodate for how much space we need for the label as well
+        var lastDirection = direction || 6;
+        direction = progression==1 ? 6 : 4; //if we don't have a direction (like on a new line with no share stations) we'll start by trying to go right or left
+        var suitableAllocationFound = false;
+        var tries = 0;
+        var requiredAllocation = station.label.hCount + 1;
+        var potentialAllocation;
+        var restart = false;
+        var startCell = $scope.grid[x][y];
+        var labelTry = 0;
+        while(!suitableAllocationFound && tries < 1000){  //hopefully we don't reach 1000 tries but just in case
+          tries++;
+          restart = false;
+          var hIndex = 0, vIndex = 0;
+          switch (direction) {
+            case 2: //up
+              vIndex = -1;
+              break;
+            case 4: //left
+              hIndex = -1;
+              break;
+            case 6: //right
+              hIndex = 1;
+              break;
+            case 8: //down
+              vIndex = 1;
+              break;
+            default:
           }
-          //can we move up
-          if(!$scope.allocatedCells[x] || !$scope.allocatedCells[x][(y-($scope.cellHeight*iteration))]){
-            newPos = {
-              x: x,
-              y: (y-($scope.cellHeight*iteration))
-            };
-            validAllocation = true;
-            return newPos;
+          var startX = x+(tries*hIndex), startY = y+(tries*vIndex);
+          var reservedCells = [];
+          //start by finding a free cell for the station. we don't want to go further than 8 cells away
+          for (var i=0;i<8;i++){
+            if(!$scope.grid[startX+(hIndex*i)]){
+              $scope.grid[startX+(hIndex*i)] = {};
+            }
+            if(!$scope.grid[startX+(hIndex*i)][startY+(vIndex*i)]){
+              $scope.createNewGridCell(startX+(hIndex*i), startY+(vIndex*i));
+            }
+            if($scope.grid[startX+(hIndex*i)][startY+(vIndex*i)] && !$scope.grid[startX+(hIndex*i)][startY+(vIndex*i)].occupied){
+              potentialAllocation = $scope.grid[startX+(hIndex*i)][startY+(vIndex*i)];
+              break;
+            }
           }
-          //can we move down
-          if(!$scope.allocatedCells[x] || !$scope.allocatedCells[x][(y+($scope.cellHeight*iteration))]){
-            newPos = {
-              x: x,
-              y: (y+($scope.cellHeight*iteration))
-            };
-            validAllocation = true;
-            return newPos;
+          if(potentialAllocation){
+            labelTry++;
+            var needToChangeDirection = false;
+            //we have a potentialAllocation, now we need to see if the label will fit as well
+            var labelY = potentialAllocation.v-1, labelX = potentialAllocation.h+1;
+            for(var v=0;v<station.label.vCount;v++){
+              for(var h=0;h<station.label.hCount;h++){
+                if(!$scope.grid[labelX+h]){
+                  //no cell exists in that direction
+                  //we should revisit this logic
+                  potentialAllocation = null;
+                  restart = true;
+                  break;
+                }
+                else if($scope.grid[labelX+h][labelY-v] && $scope.grid[labelX+h][labelY-v].occupied){
+                  //then the potential allocation won't work so we move on
+                  potentialAllocation = null;
+                  restart = true;
+                  break;
+                }
+                else{
+                  if(h==station.label.hCount-1){
+                    //we have space horizontally
+                    if(direction==4 || direction==6){
+                      needToChangeDirection = true;
+                    }
+                  }
+                  reservedCells.push($scope.grid[labelX+h][labelY-v]);
+                  if(v==station.label.vCount-1 && h==station.label.hCount-1){
+                    //we have space for the label and the station
+                    for(var i=0;i<station.label.hCount+1;i++){
+                      $scope.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
+                    }
+                    $scope.useCell(potentialAllocation.h, potentialAllocation.v, "station");
+                    for(var r=0;r<reservedCells.length;r++){
+                      $scope.useCell(reservedCells[r].h, reservedCells[r].v, "label");
+                    }
+                    station.gridLoc = potentialAllocation;
+                    station.labelLoc = reservedCells[0];
+                    suitableAllocationFound = true;
+                    return direction;
+                  }
+                }
+              }
+              if(restart){
+                restart = false;
+                if(labelTry > 8 || needToChangeDirection){
+                  changeDirection();
+                }
+                break;
+              }
+            }
           }
-          //can we move up & left/right
-          if(!$scope.allocatedCells[(x+($scope.cellWidth*iteration))] || !$scope.allocatedCells[(x+($scope.cellWidth*iteration))][(y-($scope.cellHeight*iteration))]){
-            newPos = {
-              x: (x+($scope.cellWidth*iteration)),
-              y: (y-($scope.cellHeight*iteration))
-            };
-            validAllocation = true;
-            return newPos;
+          else{
+            console.log('we probably need to change the direction of the line');
+            changeDirection();
           }
-          //can we move down & left/right
-          if(!$scope.allocatedCells[(x+($scope.cellWidth*iteration))] || !$scope.allocatedCells[(x+($scope.cellWidth*iteration))][(y+($scope.cellHeight*iteration))]){
-            newPos = {
-              x: (x+($scope.cellWidth*iteration)),
-              y: (y+($scope.cellHeight*iteration))
-            };
-            validAllocation = true;
-            return newPos;
+        }
+
+        function changeDirection(){
+          if(lastDirection && direction!= lastDirection){
+              direction = lastDirection;
+              lastDirection = null;
           }
-          //if we get here we increment for the next pass
-          iteration++;
+          else{
+            switch (direction) {
+              case 2: //up
+              case 8:
+                direction = progression==-1?4:6;
+                  break;
+              case 4: //left
+              case 6: //right
+                //at this point we probably want to see where we have more space
+                direction = progression==-1?2:8;
+                break;
+              default:
+
+            }
+          }
         }
       };
 
+			$scope.getGridLoc = function(pixelX, pixelY){
+			  //gets the grid cell based on x and y pixels
+			  var gridX = Math.round(pixelX / $scope.cellWidth);
+			  var gridY = Math.round(pixelY / $scope.cellHeight);
+			  return $scope.grid[gridX][gridY];
+			};
 
-			$scope.getFreeY = function(x, sharesStations){
-				var yArray = [];
-				for (var s in $scope.allocatedCells[x]){
-					yArray.push[s]
-				}
-				yArray.sort();
+			$scope.transposeCell = function(loc, direction){ //direction is 1 - 9 which equates to the 9 points of 4 axis (the center point (5) is not valid)
+			  var h = loc.h,v=loc.v, iteration=0, validAllocation=false;
+			  while(!validAllocation && iteration<100){
+			    switch (direction) {
+			      case 1:
+			        h-=1;
+			        v-=1;
+			        break;
+			      case 2:
+			        v-=1
+			        break;
+			      case 3:
+			        h+=1;
+			        v-=1;
+			        break;
+			      case 4:
+			        h-=1;
+			        break;
+			      case 5:
+			        //not valid
+			        break;
+			      case 6:
+			        h+=1;
+			        break;
+			      case 7:
+			        h-=1;
+			        v+=1;
+			        break;
+			      case 8:
+			        v+=1;
+			        break;
+			      case 9:
+			        h+=1;
+			        v+=1;
+			        break;
+			      default:
+			        break;
+			    }
+			    if(!$scope.grid[h][v].occupied){
+			      validAllocation = true;
+			    }
+			    iteration++;
+			  }
+			  return $scope.grid[h][v];
+			};
+
+			$scope.getFreeY = function(x){
+			  var tries = 0;
+			  var foundValidY = false;
+			  var iteration = 0;
+			  var allocatedY;
+			  while(!foundValidY && tries < 1000){  //hopefully we don't span 500 rows (we change direction every 8 rows)
+			    //lets start by looking down
+			    for(var i=0;i<8;i++){
+			      if(!$scope.grid[x][$scope.baseY + (i*iteration)].occupied){
+			        allocatedY = $scope.baseY + (i*iteration);
+			        foundValidY = true;
+			        return allocatedY;
+			      }
+			      tries++;
+			    }
+			    //then we try looking up
+			    for(var i=0;i<8;i++){
+			      if(!$scope.grid[x][$scope.baseY - (i*iteration)].occupied){
+			        allocatedY = $scope.baseY - (i*iteration);
+			        foundValidY = true;
+			        return allocatedY;
+			      }
+			      tries++;
+			    }
+			    iteration++;
+			  }
+
+			  return false;
+			};
+
+			$scope.getLabelInfo = function(){
+			  //determines the labels size and the number of cells it consumes
+			  var labelSize = {};
+			  $scope.pen.beginPath();
+			  $scope.pen.font = $scope.font;
+			  for(var s in $scope.stations){
+			    var words = s.split(" ");
+			    var labelSize = $scope.pen.measureText(s);
+			    var label = {};
+			    // we should wrap the text based on the longest word
+			    if(words.length > 1){
+			      //set the max length
+			      //var longest = getLongestWord(words);
+			      var longest = $scope.cellWidth * 5;
+			      var longestSize = $scope.pen.measureText(longest);
+			      var longestLine = 0;
+			      var hCount=0, vCount=0, lines=[];
+			      var line = "";
+			      for (var i=0;i<words.length;i++){
+			        var lineLength = $scope.pen.measureText(line+" "+words[i]);
+			        if(lineLength.width<=longest){
+			          line += words[i];
+			          if(i<words.length-1){
+			            line += " ";
+			          }
+			        }
+			        else{
+			          //we start a new line
+			          lines.push(line);
+			          longestLine = lines[longestLine].length > lines[lines.length-1].length ? longestLine : lines.length-1;
+			          line = words[i];
+			        }
+			      }
+			      lines.push(line);
+			      var lineLength = $scope.pen.measureText(lines[longestLine]).width;
+			      label.hCount = Math.ceil(lineLength / $scope.cellWidth);
+			      label.vCount = label.hCount;  //as the label is going diagonally at 45 degrees the space reserved should be a square
+			      label.lines = lines;
+			    }
+			    else{
+			      label.hCount = Math.ceil(labelSize.width / $scope.cellWidth);
+			      label.vCount = label.hCount;
+			      label.lines = [s];
+			    }
+
+			    $scope.stations[s].label = label;
+			  }
+
+			  function getLongestWord(words){
+			    var longestWord = "";
+			    for(var j=0;j<words.length;j++){
+			      longestWord = words[j].length > longestWord.length ? words[j] : longestWord;
+			    }
+			    return longestWord;
+			  }
+			};
+
+			$scope.useCell = function(h, v, item){
+			  var cellWidth = $scope.cellWidth, cellHeight = $scope.cellHeight;
+			  var currX = h*cellWidth, currY = v*cellHeight;
+			  if(!$scope.grid[h]){
+			    $scope.grid[h] = {};
+			  }
+			  if(!$scope.grid[h][v]){
+			    $scope.grid[h][v] = {
+			      center: {x: currX+(cellWidth/2), y: currY+(cellHeight/2)},
+			      h: h,
+			      v: v,
+			      locs: {
+			        a: {x: currX, y: currY},
+			        b: {x: currX+(cellWidth/2), y: currY},
+			        c: {x: currX+cellWidth, y: currY},
+			        d: {x: currX, y: currY+(cellHeight/2)},
+			        e: {x: currX+(cellWidth/2), y: currY+(cellHeight/2)},
+			        f: {x: currX+(cellWidth), y: currY+(cellHeight/2)},
+			        g: {x: currX, y: currY+cellHeight},
+			        h: {x: currX+(cellWidth/2), y: currY+cellHeight},
+			        i: {x: currX+(cellWidth), y: currY+cellHeight},
+			      },
+			      occupied: false,
+			      item: null
+			    };
+			  }
+			  $scope.grid[h][v].occupied = true;
+			  $scope.grid[h][v].item = item;
+			  if($scope.debug){
+			    $scope.pen.beginPath();
+			    switch (item) {
+			      case "station":
+			        $scope.pen.fillStyle = "blue";
+			        break;
+			      case "label":
+			        $scope.pen.fillStyle = "yellow";
+			        break;
+			      case "blocked":
+			        $scope.pen.fillStyle = "#CCC";
+			        break;
+			      default:
+			        $scope.pen.fillStyle = "red"; //an error has occured
+			        break;
+			    }
+			    $scope.pen.arc($scope.grid[h][v].center.x, $scope.grid[h][v].center.y, $scope.stationRadius, 0, Math.PI * 2);
+			    //$scope.pen.rect($scope.grid[h][v].locs.a.x, $scope.grid[h][v].locs.a.y, $scope.cellWidth, $scope.cellHeight);
+			    $scope.pen.fill();
+			  }
+			};
+
+			$scope.createSelectionsObject = function(callbackFn){
+			  $scope.backendApi.model.session.rpc({handle: $scope.appHandle, method: "CreateSessionObject", params:[{qInfo:{qId:"",qType:"SessionLists"},qSelectionObjectDef:{}}]}).then(function(csoResponse) {
+			    $scope.csHandle = csoResponse.result.qReturn.qHandle;
+			    callbackFn.call(null);
+			  });
+			};
+
+			$scope.checkForSelectionObject = function(callbackFn){
+			  if(!$scope.csHandle){
+			    $scope.createSelectionsObject(callbackFn);
+			  }
+			  else{
+			    callbackFn.call(null);
+			  }
+			};
+
+			$scope.checkForSelections = function(callbackFn){
+			  $scope.backendApi.model.session.rpc({handle: $scope.csHandle, method: "GetLayout", params:[]}).then(function(response) {
+			    callbackFn.call(null, response.result.qLayout.qSelectionObject.qSelections.length > 0);
+			  });
+			};
+
+			$scope.getCurrentSelections = function(callbackFn){
+			  $scope.checkForSelectionObject(function(){
+			    $scope.checkForSelections(function(hasSelections){
+			      if(hasSelections){
+			        var dimensions = $scope.layout.qHyperCube.qDimensionInfo;
+			        var dimsChecked = 0;
+			        for(var i=0;i<dimensions.length;i++){
+			          console.log(dimensions);
+			          $scope.getField(dimensions[i].qFallbackTitle, function(handle){
+			            $scope.getFieldLayout(handle, function(layout){
+			              dimsChecked++;
+			              if(dimsChecked==dimensions.length){
+			                console.log('selections got');
+			                callbackFn.call(null);
+			              }
+			            });
+			          });
+			        }
+			      }
+			      else{
+			        callbackFn.call(null);
+			      }
+			    });
+			  });
 
 			};
 
+			$scope.getField = function(field, callbackFn){
+			  var lbDef = {
+			    qInfo:{qType:"ListObject"},
+			    qListObjectDef:{qDef:{qFieldDefs:[field]}}
+			  }
+			  $scope.backendApi.model.session.rpc({handle: $scope.appHandle, method: "CreateSessionObject", params:[lbDef]}).then(function(gfResponse) {
+			    callbackFn.call(null, gfResponse.result.qReturn.qHandle);
+			  });
+			};
+
+			$scope.getFieldLayout = function(handle, callbackFn){
+			  $scope.backendApi.model.session.rpc({handle: handle, method: "GetLayout", params:[]}).then(function(response) {
+			    var layout = response.result.qLayout;
+			    $scope.backendApi.model.session.rpc({handle: handle, method: "GetListObjectData", params:["/qListObjectDef",[{qTop:0, qLeft:0, qHeight:layout.qListObject.qSize.qcy, qWidth: 1 }]]}).then(function(glResponse) {
+			      $scope.selections[layout.qListObject.qDimensionInfo.qFallbackTitle] = {};
+			      var listMatrix = glResponse.result.qDataPages[0].qMatrix;
+			      for(var i=0;i<listMatrix.length;i++){
+			        if(listMatrix[i][0].qState=='O' || listMatrix[i][0].qState=='S'){
+			            $scope.selections[layout.qListObject.qDimensionInfo.qFallbackTitle][listMatrix[i][0].qText] = true;
+			        }
+			      }
+			      callbackFn.call(null, glResponse.result);
+			    });
+			  });
+			};
+
+
+			$scope.selections = {};
+			$scope.lastrow = 0;
+			$scope.debug = false;
+			$scope.appHandle = $scope.backendApi.model.session.currentApp.handle;
+			//properties that control the hypercube page height
+			$scope.pageHeight = 100;
+			//properties that control how the canvas is drawn
+			$scope.pen;
+			$scope.padding = 30;
+			$scope.gridSize = {x:0, y:0};
+			$scope.grid = [];
+			$scope.stationRadius = 8;
+			$scope.lineWidth = 5;
+			$scope.lineSpacing = 5;
+			$scope.labelLineHeight = 10;
+			$scope.font = "10px Arial";
+			$scope.paperWidth;
+			$scope.paperHeight;
+			$scope.gridWidth;
+			$scope.gridHeight;
+			$scope.cellWidth;
+			$scope.cellHeight;
+			$scope.dominentAxis;
+			$scope.allocatedCells = {
+				x:{},
+				y:{}
+			};
+			$scope.firstStationColour = "#62A74A";
+			//colour array for drawing the lines
+			$scope.colours = [
+				"#61A729",
+				"#EE5A35",
+				"#4591BA",
+				"yellow",
+				"pink"
+			];
+			//object to store the line definitions
+			$scope.lines = [];
+			//object to store the station definitions
+			$scope.stations = {};
+
 		},
 		paint: function ( $element, layout ) {
+			console.log(layout);
 			var that = this;
 			//make sure we clear out the previous lines/stations
 			that.$scope.lines = [];
 			that.$scope.stations = {};
 			that.$scope.allocatedCells = {};
+			that.$scope.grid = {};
+			that.$scope.lastrow = 0;
+			that.$scope.$parent.layout.qHyperCube.qDataPages = [];
+			that.$scope.selections = {};
 
-			that.$scope.paperWidth = $element.width();
-			that.$scope.paperHeight = $element.height();
-			that.$scope.gridWidth = $element.width() - (that.$scope.padding*2);
-			that.$scope.gridHeight = $element.height() - (that.$scope.padding*2);
-			that.$scope.dominentAxis = (that.$scope.paperWidth > that.$scope.paperHeight)?"x":"y";
+			that.$scope.paperWidth = $element.width() - (that.$scope.padding*2);
+			that.$scope.paperHeight = $element.height() - (that.$scope.padding*2);
 
-			that.$scope.downloadHypercubeData(function(){
-				that.$scope.restructureData();
-				//canvas
-        that.$scope.cellWidth = (that.$scope.gridWidth / (that.$scope.gridSize+4));	//we add four to give us an extra 2 cells on each side of the grid
-  			that.$scope.cellHeight = (that.$scope.gridHeight / that.$scope.gridSize);
-				var paper = document.createElement('canvas');
-				paper.width = that.$scope.paperWidth;
-				paper.height = that.$scope.paperHeight;
-				$element.html(paper);
-				that.$scope.pen = paper.getContext('2d');
-				//translate the canvas by the 'padding' amount
-				that.$scope.pen.translate(that.$scope.padding, that.$scope.padding);
+			that.$scope.cellWidth = that.$scope.stationRadius*2;
+			that.$scope.cellHeight = that.$scope.stationRadius*2;
 
-				if(that.$scope.debug){
+			that.$scope.gridSize.x = Math.floor(that.$scope.paperWidth / that.$scope.cellWidth);
+			that.$scope.gridSize.y = Math.floor(that.$scope.paperHeight / that.$scope.cellHeight);
+
+			console.log(that.$scope);
+
+			that.$scope.getCurrentSelections(function(){
+				that.$scope.downloadHypercubeData(function(){
+					that.$scope.restructureData();
+					//we need multiple canvas element to help with performance
+					//debug canvas
+					var debugPaper = document.createElement('canvas');
+					debugPaper.width = $element.width();
+					debugPaper.height = $element.height();
+					//line canvas
+					var linePaper = document.createElement('canvas');
+					linePaper.width = $element.width();
+					linePaper.height = $element.height();
+					//station canvas
+					var stationPaper = document.createElement('canvas');
+					stationPaper.width = $element.width();
+					stationPaper.height = $element.height();
+					//label canvas
+					var labelPaper = document.createElement('canvas');
+					labelPaper.width = $element.width();
+					labelPaper.height = $element.height();
+
+					//canvas
+					var paper = document.createElement('canvas');
+					paper.width = $element.width();
+					paper.height = $element.height();
+					$element.html(paper);
+					that.$scope.pen = paper.getContext('2d');
+
+					//translate the canvas by the 'padding' amount
+					that.$scope.pen.translate(that.$scope.padding, that.$scope.padding);
+
+					that.$scope.getLabelInfo();
+
 					that.$scope.drawGrid();
-				}
-				that.$scope.processStations();
-				//that.$scope.drawLines();
-				//that.$scope.drawStations();
 
-				//draw each station
-				// $scope.pen.beginPath();
-				// $scope.pen.strokeStyle = "black";
-				// $scope.pen.fillStyle = "white";
-				// $scope.pen.lineWidth = 3;
-				// for(var l=0; l < 1; l++){
-				// 	var stationCount = lines[l].stations.length;
-				// 	for (var s=0;s<stationCount;s++){
-				// 		var station = lines[l].stations[s];
-				// 		$scope.pen.moveTo(station.gridPosition.x + stationRadius, station.gridPosition.y);
-				// 		$scope.pen.arc(station.gridPosition.x, station.gridPosition.y, stationRadius, 0, Math.PI * 2);
-				// 	}
-				// }
-				// $scope.pen.fill();
-				// $scope.pen.stroke();
-				// $scope.pen.closePath();
+					that.$scope.processStations();
+					that.$scope.drawLines();
+					that.$scope.drawStations();
+					that.$scope.drawLabels();
+				});
 			});
-
-
-
 
 		}
 	};
