@@ -2,8 +2,8 @@ module.exports = function(grunt) {
   grunt.initConfig({
     includes: {
       files:{
-        src: ['TubeMap.js'],
-        dest: '.',
+        src: ['TubeMapViz.js'],
+        dest: 'build',
         cwd: 'src'
       }
     },

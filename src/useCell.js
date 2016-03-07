@@ -1,49 +1,36 @@
-$scope.useCell = function(h, v, item){
-  var cellWidth = $scope.cellWidth, cellHeight = $scope.cellHeight;
+value: function(h, v, item){
+  var cellWidth = this.cellWidth, cellHeight = this.cellHeight;
   var currX = h*cellWidth, currY = v*cellHeight;
-  if(!$scope.grid[h]){
-    $scope.grid[h] = {};
+  if(!this.grid[h]){
+    this.grid[h] = {};
   }
-  if(!$scope.grid[h][v]){
-    $scope.grid[h][v] = {
-      center: {x: currX+(cellWidth/2), y: currY+(cellHeight/2)},
-      h: h,
-      v: v,
-      locs: {
-        a: {x: currX, y: currY},
-        b: {x: currX+(cellWidth/2), y: currY},
-        c: {x: currX+cellWidth, y: currY},
-        d: {x: currX, y: currY+(cellHeight/2)},
-        e: {x: currX+(cellWidth/2), y: currY+(cellHeight/2)},
-        f: {x: currX+(cellWidth), y: currY+(cellHeight/2)},
-        g: {x: currX, y: currY+cellHeight},
-        h: {x: currX+(cellWidth/2), y: currY+cellHeight},
-        i: {x: currX+(cellWidth), y: currY+cellHeight},
-      },
-      occupied: false,
-      item: null
-    };
+  if(!this.grid[h][v]){
+    this.createNewGridCell(h, v);
   }
-  $scope.grid[h][v].occupied = true;
-  $scope.grid[h][v].item = item;
-  if($scope.debug){
-    $scope.pen.beginPath();
+  this.grid[h][v].occupied = true;
+  this.grid[h][v].item = item;
+  if(this.debug){
+    this.debugPaper.pen.beginPath();
     switch (item) {
       case "station":
-        $scope.pen.fillStyle = "blue";
+        this.debugPaper.pen.fillStyle = "blue";
         break;
       case "label":
-        $scope.pen.fillStyle = "yellow";
+        this.debugPaper.pen.fillStyle = "yellow";
         break;
       case "blocked":
-        $scope.pen.fillStyle = "#CCC";
+        this.debugPaper.pen.fillStyle = "#CCC";
         break;
       default:
-        $scope.pen.fillStyle = "red"; //an error has occured
+        this.debugPaper.pen.fillStyle = "red"; //an error has occured
         break;
     }
-    $scope.pen.arc($scope.grid[h][v].center.x, $scope.grid[h][v].center.y, $scope.stationRadius, 0, Math.PI * 2);
-    //$scope.pen.rect($scope.grid[h][v].locs.a.x, $scope.grid[h][v].locs.a.y, $scope.cellWidth, $scope.cellHeight);
-    $scope.pen.fill();
-  }
-};
+    this.debugPaper.pen.arc(this.grid[h][v].center.x, this.grid[h][v].center.y, this.stationRadius, 0, Math.PI * 2);
+    //this.pen.rect(this.grid[h][v].locs.a.x, this.grid[h][v].locs.a.y, this.cellWidth, this.cellHeight);
+    this.debugPaper.pen.fill();
+  }  
+  this.boundLeft = Math.min(this.boundLeft, this.grid[h][v].locs.a.x);
+  this.boundRight = Math.max(this.boundRight, this.grid[h][v].locs.c.x);
+  this.boundTop = Math.min(this.boundTop, this.grid[h][v].locs.a.y);
+  this.boundBottom = Math.max(this.boundBottom, this.grid[h][v].locs.g.y);
+}
