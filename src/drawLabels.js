@@ -1,29 +1,47 @@
-$scope.drawLabels = function(){
-  for(var s in $scope.stations){
-    if($scope.stations[s].labelLoc){
-        var x = $scope.stations[s].labelLoc.center.x;
-        var y = $scope.stations[s].labelLoc.center.y;        
+value: function(){
+  this.labelPaper.canvas.width = this.width;
+  //this.labelPaper.pen.setTransform(this.PIXEL_RATIO, 0, 0, this.PIXEL_RATIO, 0, 0);
+  this.labelPaper.pen.translate(this.posX, this.posY);
+  for(var s in this.stations){
+    if(this.stations[s].labelLoc){
+        var station = this.stations[s];
+        var x = station.labelLoc.center.x;
+        var y = station.labelLoc.center.y;
         var textX = 0, textY = 0;
-        $scope.pen.save()
-        $scope.pen.beginPath();
-        //$scope.pen.moveTo(x,y);
-        $scope.pen.textAlign = "left";
-        $scope.pen.textBaseline = "middle";
-        $scope.pen.fillStyle = "black";
-        $scope.pen.translate(x, y);
-        $scope.pen.rotate(-45*Math.PI / 180);
-
-        for(var i=0;i<$scope.stations[s].label.lines.length;i++){
-          $scope.pen.fillText($scope.stations[s].label.lines[i], textX, textY);
-          textY+= $scope.labelLineHeight;
+        this.labelPaper.pen.save()
+        this.labelPaper.pen.beginPath();
+        //this.pen.moveTo(x,y);
+        var fontSize = this.fontSize;
+        if(station.mode=="highlight"){
+          fontSize = fontSize * this.highlightScale;
         }
-        //$scope.pen.fillStyle = "white";
-        //$scope.pen.lineWidth = 3;
+        // if(this.debug){
+        //   this.labelPaper.pen.rect(station.labelLoc.locs.a.x, station.labelLoc.locs.a.y, this.cellWidth, this.cellHeight);
+        // }
+        this.labelPaper.pen.font = this.fontWeight+" "+ fontSize +"px "+this.fontFamily;
+        this.labelPaper.pen.textAlign = "left";
+        this.labelPaper.pen.textBaseline = "middle";
+        this.labelPaper.pen.fillStyle = "black";
+        if(station.status==0){
+          this.labelPaper.pen.fillStyle = this.inactiveColour;
+        }
+        this.labelPaper.pen.translate(x, y);
+        this.labelPaper.pen.rotate(-45*Math.PI / 180);
 
-        //$scope.pen.arc(x, y, $scope.stationRadius, 0, Math.PI * 2);
-        //$scope.pen.stroke();
-        $scope.pen.fill()
-        $scope.pen.restore()
+        if(!station.custom || !station.custom.drawLabel==undefined || station.custom.drawLabel!==false){
+          for(var i=0;i<this.stations[s].label.lines.length;i++){
+            this.labelPaper.pen.fillText(this.stations[s].label.lines[i], textX, textY);
+            textY+= this.labelLineHeight;
+          }
+        }
+        //this.pen.fillStyle = "white";
+        //this.pen.lineWidth = 3;
+
+        //this.pen.arc(x, y, this.stationRadius, 0, Math.PI * 2);
+        //this.pen.stroke();
+
+        this.labelPaper.pen.fill();
+        this.labelPaper.pen.restore();
     }
   }
-};
+}
