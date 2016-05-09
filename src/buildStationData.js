@@ -9,7 +9,7 @@ value: function(lines){
         for(var lS in lines[l].stations){
           if(!this.stations[lines[l].stations[lS].name]){
             //this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hLinesDrawn:0, vLinesDrawn:0, status:lines[l].stations[lS].status, mode:"normal"};
-            this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hOddLinesDrawn:0, hEvenLinesDrawn:0, vOddLinesDrawn:0, vEvenLinesDrawn:0, mode:"normal"};
+            this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hLinesDrawn:0, vLinesDrawn:0, hAboveLinesDrawn:0, hBelowLinesDrawn:0, vLeftLinesDrawn:0, vRightLinesDrawn:0, mode:"normal"};
             for (var p in lines[l].stations[lS]){
               this.stations[lines[l].stations[lS].name][p] = lines[l].stations[lS][p];
             }
