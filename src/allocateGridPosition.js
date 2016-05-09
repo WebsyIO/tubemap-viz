@@ -67,7 +67,7 @@ value: function(x, y, station, lastStation, line, progression, direction){
         if(!this.grid[potentialAllocation.h+i][potentialAllocation.v]){
           this.createNewGridCell(potentialAllocation.h+i, potentialAllocation.v);
         }
-        if(this.grid[potentialAllocation.h+i][potentialAllocation.v].occupied){
+        if(this.grid[potentialAllocation.h+i][potentialAllocation.v] && this.grid[potentialAllocation.h+i][potentialAllocation.v].occupied){
           potentialAllocation = null;
           keepgoing = false;
           restart = true;
@@ -78,7 +78,6 @@ value: function(x, y, station, lastStation, line, progression, direction){
         //now we need to see if the label will fit as well
         var labelY = potentialAllocation.v-1, labelX = potentialAllocation.h+1;
         var stationSpace = line.longestStation;
-        console.log('stationSpace '+stationSpace);
 
         for(var v=0;v<stationSpace;v++){
           for(var h=0;h<stationSpace;h++){
@@ -90,7 +89,7 @@ value: function(x, y, station, lastStation, line, progression, direction){
               // potentialAllocation = null;
               // restart = true;
               // break;
-            
+
             if(this.grid[labelX+h][labelY-v] && this.grid[labelX+h][labelY-v].occupied){
               //then the potential allocation won't work so we move on
               potentialAllocation = null;
@@ -148,8 +147,7 @@ value: function(x, y, station, lastStation, line, progression, direction){
         }
       }
     }
-    else{
-      console.log('we probably need to change the direction of the line');
+    else{      
       changeDirection.call(this);
     }
   }

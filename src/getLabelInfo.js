@@ -11,7 +11,7 @@ value: function(){
     if(words.length > 1){
       //set the max length
       //var longest = getLongestWord(words);
-      var longest = this.cellWidth * 5;
+      var longest = this.cellWidth * this.labelWrapThreshold;
       this.labelPaper.pen.font = this.fontWeight+" "+ this.fontSize +"px "+this.fontFamily;
       var longestSize = this.labelPaper.pen.measureText(longest);
       var longestLine = 0;
@@ -20,14 +20,17 @@ value: function(){
       for (var i=0;i<words.length;i++){
         var lineLength = this.labelPaper.pen.measureText(line+" "+words[i]);
         if(lineLength.width<=longest || line.split(" ").length <= 1){
+          if(line.split("")[line.length-1]!=" "){
+            line += " ";
+          }
           line += words[i];
-          if(i<words.length-1){
+          if(i<words.length){
             line += " ";
           }
         }
         else{
           //we start a new line
-          lines.push(line);
+          lines.push(line.trim());
           longestLine = lines[longestLine].length > lines[lines.length-1].length ? longestLine : lines.length-1;
           line = words[i];
         }

@@ -6,9 +6,8 @@ value: function(){
   var startCellX, startCellY, startPixelY, gridLoc;
 
   //we should draw this line centrally to the grid horizontally
-
-  //before understanding where the first station can go we need to understand how much room the label needs
   var label = this.stations[this.lines[0].stations[0].name].label;
+  var longestStation = this.lines[0].longestStation || 10;
   startCellX = 1;
   startCellY = Math.ceil(this.gridSize.y/2);
 
@@ -27,7 +26,6 @@ value: function(){
     gridLoc = this.grid[startCellX][startCellY];
     this.lines[0].stations[s].gridLoc = gridLoc;
     this.stations[this.lines[0].stations[s].name].gridLoc = gridLoc
-    console.log('set gridloc for '+this.lines[0].stations[s].name);
 
     //allocate the position for the station label starting 1 cell immediately up and right of the station
     var labelY = startCellY-1, labelX = startCellX+1;
@@ -42,13 +40,6 @@ value: function(){
     var station = this.lines[0].stations[s];
 
     //now we move to what would effectively be the end of the label
-    startCellX += label.hCount+1;
-
-    if(s<stationCount){
-      //this.pen.lineTo(startCellX * cellWidth, startCellY* cellHeight);
-      // this.pen.arc(station.gridPosition.x, station.gridPosition.y, 1, 0, Math.PI * 2);
-      // this.pen.stroke();
-      // this.pen.fill()
-    }
+    startCellX += longestStation+1;
   }
 }

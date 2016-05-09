@@ -5,7 +5,6 @@ value: function(){
     var stationCount = this.lines[l].stations.length;
     var startCellX;
     var startCellY;
-    console.log('Processing '+this.lines[l].name);
     var stationsDrawn = [];
     var currentStation = 0;
     var currentCheckpoint = 0;
@@ -17,7 +16,6 @@ value: function(){
       for (var c=currentCheckpoint;c<stationCount;c++){
         if(this.stations[this.lines[l].stations[c].name].gridLoc){
           //we have a shared station
-          console.log(this.lines[l].stations[c].name+' is a shared station');
           currentStation = c;
           break;
         }
@@ -46,7 +44,6 @@ value: function(){
                 }
                 else{
                   //in theory we shouldn't get here because we're not drawing diagonal lines
-                  console.log('something went wrong');
                 }
               }
             }
@@ -87,7 +84,6 @@ value: function(){
         }
         currentCheckpoint = this.lines[l].stations.length;
       }
-    }
-    console.log(stationsDrawn);
+    }    
   }
 }

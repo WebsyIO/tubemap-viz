@@ -3,13 +3,10 @@ value: function(){
   var mapWidth = this.boundRight -  this.boundLeft;
   var mapHeight = this.boundBottom - this.boundTop;
   if(mapWidth < this.width){
-    this.posX = (this.width - mapWidth) / 2;
+    this.posX = ((this.width - mapWidth) / 2);
   }
   else{
-    this.posX = 0;
+    this.posX = (0 - this.boundLeft) + 30;
   }
   this.posY = ((this.height - mapHeight) / 2) - this.boundTop;
-  console.log('height '+this.height);
-  console.log('top '+this.boundTop);
-  console.log('bottom ' +this.boundBottom);
 }

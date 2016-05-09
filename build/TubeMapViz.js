@@ -42,7 +42,7 @@ Events.prototype.getCanvasPos = function(){
     var obj = this.getCanvas();
     var top = 0;
     var left = 0;
-    while (obj.tagName != "BODY") {
+    while (obj && obj.tagName && obj.tagName != "BODY") {
         top += obj.offsetTop;
         left += obj.offsetLeft;
         obj = obj.offsetParent;
@@ -117,18 +117,18 @@ Events.prototype.listen = function(){
 
     // mobile events
     this.canvas.addEventListener("touchstart", function(evt){
-        evt.preventDefault();
+        //evt.preventDefault();
         that.touchStart = true;
         that.reset(evt);
     }, false);
 
     this.canvas.addEventListener("touchmove", function(evt){
-        evt.preventDefault();
+        //evt.preventDefault();
         that.reset(evt);
     }, false);
 
     this.canvas.addEventListener("touchend", function(evt){
-        evt.preventDefault();
+        //evt.preventDefault();
         that.touchEnd = true;
         that.reset(evt);
     }, false);
@@ -244,17 +244,21 @@ var TubeMapViz = (function(){
   function TubeMapViz(options){
     options = options || {};
     this.debug = options.debug || false;
+    this.disableHighlighting = options.disableHighlighting || false;
     this.padding = options.padding || 30;
     this.stationRadius = options.stationRadius || 8;
     this.lineWidth = options.lineWidth || 5;
     this.lineSpacing = options.lineSpacing || 5;
     this.labelLineHeight = options.labelLineHeight || 13;
+    this.labelWrapThreshold = options.labelWrapThreshold || 4;
     this.fontSize = options.fontSize || 10;
     this.fontFamily = options.fontFamily || "Arial";
     this.fontWeight = options.fontWeight || "Normal";
     this.highlightScale = options.highlightScale || 1.3;
+    this.inactiveColour = options.inactiveColour || "#DDDDDD";
     this.stationColour = options.stationColour || "black";
     this.stationThickness = options.stationThickness || this.lineWidth;
+    this.stationClicked = options.stationClicked || this.stationClicked;
     this.colours = options.colours || [
       "#61A729",
       "#EE5A35",
@@ -262,9 +266,20 @@ var TubeMapViz = (function(){
       "yellow",
       "pink"
     ];
+    var ctx = document.createElement("canvas").getContext("2d"),
+        dpr = window.devicePixelRatio || 1,
+        bsr = ctx.webkitBackingStorePixelRatio ||
+              ctx.mozBackingStorePixelRatio ||
+              ctx.msBackingStorePixelRatio ||
+              ctx.oBackingStorePixelRatio ||
+              ctx.backingStorePixelRatio || 1;
+    this.PIXEL_RATIO = dpr / bsr;
   }
   TubeMapViz.prototype = Object.create(Object.prototype, {
     debug:{
+      writable: true
+    },
+    events:{
       writable: true
     },
     width:{
@@ -372,8 +387,9 @@ var TubeMapViz = (function(){
         if(element){
           element.innerHTML = "";
           if(!this.listening){
+            console.log('adding event listeners to element');
             element.addEventListener('resize', this.render.bind(this), false);
-            element.addEventListener('wheel', this.zoom.bind(this), false);
+            //element.addEventListener('wheel', this.zoom.bind(this), false);
             element.addEventListener('mousedown', this.startPan.bind(this), false);
             element.addEventListener('touchstart', this.startPan.bind(this), false);
             //element.addEventListener('mouseenter', this.startPan.bind(this), false);
@@ -384,6 +400,13 @@ var TubeMapViz = (function(){
             element.addEventListener('touchend', this.endPan.bind(this), false);
             element.addEventListener('mouseout', this.endPan.bind(this), false);
             element.addEventListener('touchleave', this.endPan.bind(this), false);
+            if (!('remove' in Element.prototype)) {
+                Element.prototype.remove = function() {
+                    if (this.parentNode) {
+                        this.parentNode.removeChild(this);
+                    }
+                };
+            }
             this.listening = true;
           }
           var height = element.clientHeight, width = element.clientWidth;
@@ -435,6 +458,19 @@ var TubeMapViz = (function(){
           this.stationPaper.canvas.width = width;
           this.stationPaper.canvas.height = height;
           element.appendChild(this.stationPaper.canvas);
+          //image canvas
+          var imageCanvas = document.createElement('canvas');
+          this.imagePaper = {
+            canvas: imageCanvas,
+            pen: imageCanvas.getContext('2d')
+          };
+          this.imagePaper.canvas.style.position = "absolute";
+          this.imagePaper.canvas.style.top = "0px";
+          this.imagePaper.canvas.style.left = "0px";
+          this.imagePaper.canvas.style.zIndex = "30";
+          this.imagePaper.canvas.width = width;
+          this.imagePaper.canvas.height = height;
+          element.appendChild(this.imagePaper.canvas);
           //label canvas
           var labelCanvas = document.createElement('canvas');
           this.labelPaper = {
@@ -445,8 +481,10 @@ var TubeMapViz = (function(){
           this.labelPaper.canvas.style.top = "0px";
           this.labelPaper.canvas.style.left = "0px";
           this.labelPaper.canvas.style.zIndex = "40";
-          this.labelPaper.canvas.width = width;
-          this.labelPaper.canvas.height = height;
+          this.labelPaper.canvas.width = width;// * this.PIXEL_RATIO;
+          this.labelPaper.canvas.height = height;// * this.PIXEL_RATIO;
+          // this.labelPaper.canvas.style.width = width + "px";
+          // this.labelPaper.canvas.style.height = height + "px";
           element.appendChild(this.labelPaper.canvas);
           //panning layer
           var panningCanvas = document.createElement('canvas');
@@ -461,19 +499,7 @@ var TubeMapViz = (function(){
           this.panningPaper.canvas.width = width;
           this.panningPaper.canvas.height = height;
           element.appendChild(this.panningPaper.canvas);
-          //interaction layer
-          var eventCanvas = document.createElement('canvas');
-          this.eventPaper = {
-            canvas: eventCanvas,
-            pen: eventCanvas.getContext('2d')
-          };
-          this.eventPaper.canvas.style.position = "absolute";
-          this.eventPaper.canvas.style.top = "0px";
-          this.eventPaper.canvas.style.left = "0px";
-          this.eventPaper.canvas.style.zIndex = "60";
-          this.eventPaper.canvas.width = width;
-          this.eventPaper.canvas.height = height;
-          element.appendChild(this.eventPaper.canvas);
+
           this.height = height;
           this.width = width;
         }
@@ -557,7 +583,7 @@ var TubeMapViz = (function(){
               if(!this.grid[potentialAllocation.h+i][potentialAllocation.v]){
                 this.createNewGridCell(potentialAllocation.h+i, potentialAllocation.v);
               }
-              if(this.grid[potentialAllocation.h+i][potentialAllocation.v].occupied){
+              if(this.grid[potentialAllocation.h+i][potentialAllocation.v] && this.grid[potentialAllocation.h+i][potentialAllocation.v].occupied){
                 potentialAllocation = null;
                 keepgoing = false;
                 restart = true;
@@ -568,7 +594,6 @@ var TubeMapViz = (function(){
               //now we need to see if the label will fit as well
               var labelY = potentialAllocation.v-1, labelX = potentialAllocation.h+1;
               var stationSpace = line.longestStation;
-              console.log('stationSpace '+stationSpace);
 
               for(var v=0;v<stationSpace;v++){
                 for(var h=0;h<stationSpace;h++){
@@ -580,7 +605,7 @@ var TubeMapViz = (function(){
                     // potentialAllocation = null;
                     // restart = true;
                     // break;
-                  
+
                   if(this.grid[labelX+h][labelY-v] && this.grid[labelX+h][labelY-v].occupied){
                     //then the potential allocation won't work so we move on
                     potentialAllocation = null;
@@ -638,8 +663,7 @@ var TubeMapViz = (function(){
               }
             }
           }
-          else{
-            console.log('we probably need to change the direction of the line');
+          else{      
             changeDirection.call(this);
           }
         }
@@ -680,7 +704,11 @@ var TubeMapViz = (function(){
               //no need for a line to check against itself
               for(var lS in lines[l].stations){
                 if(!this.stations[lines[l].stations[lS].name]){
-                  this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], linesDrawn:0, status:lines[l].stations[lS].status, mode:"normal"};
+                  //this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hLinesDrawn:0, vLinesDrawn:0, status:lines[l].stations[lS].status, mode:"normal"};
+                  this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hOddLinesDrawn:0, hEvenLinesDrawn:0, vOddLinesDrawn:0, vEvenLinesDrawn:0, mode:"normal"};
+                  for (var p in lines[l].stations[lS]){
+                    this.stations[lines[l].stations[lS].name][p] = lines[l].stations[lS][p];
+                  }
                 }
                 for (var l2S in lines[l2].stations){
                   if(lines[l].stations[lS].name == lines[l2].stations[l2S].name){
@@ -709,9 +737,8 @@ var TubeMapViz = (function(){
         var startCellX, startCellY, startPixelY, gridLoc;
 
         //we should draw this line centrally to the grid horizontally
-
-        //before understanding where the first station can go we need to understand how much room the label needs
         var label = this.stations[this.lines[0].stations[0].name].label;
+        var longestStation = this.lines[0].longestStation || 10;
         startCellX = 1;
         startCellY = Math.ceil(this.gridSize.y/2);
 
@@ -730,7 +757,6 @@ var TubeMapViz = (function(){
           gridLoc = this.grid[startCellX][startCellY];
           this.lines[0].stations[s].gridLoc = gridLoc;
           this.stations[this.lines[0].stations[s].name].gridLoc = gridLoc
-          console.log('set gridloc for '+this.lines[0].stations[s].name);
 
           //allocate the position for the station label starting 1 cell immediately up and right of the station
           var labelY = startCellY-1, labelX = startCellX+1;
@@ -745,14 +771,7 @@ var TubeMapViz = (function(){
           var station = this.lines[0].stations[s];
 
           //now we move to what would effectively be the end of the label
-          startCellX += label.hCount+1;
-
-          if(s<stationCount){
-            //this.pen.lineTo(startCellX * cellWidth, startCellY* cellHeight);
-            // this.pen.arc(station.gridPosition.x, station.gridPosition.y, 1, 0, Math.PI * 2);
-            // this.pen.stroke();
-            // this.pen.fill()
-          }
+          startCellX += longestStation+1;
         }
       }
 
@@ -765,7 +784,6 @@ var TubeMapViz = (function(){
           var stationCount = this.lines[l].stations.length;
           var startCellX;
           var startCellY;
-          console.log('Processing '+this.lines[l].name);
           var stationsDrawn = [];
           var currentStation = 0;
           var currentCheckpoint = 0;
@@ -777,7 +795,6 @@ var TubeMapViz = (function(){
             for (var c=currentCheckpoint;c<stationCount;c++){
               if(this.stations[this.lines[l].stations[c].name].gridLoc){
                 //we have a shared station
-                console.log(this.lines[l].stations[c].name+' is a shared station');
                 currentStation = c;
                 break;
               }
@@ -806,7 +823,6 @@ var TubeMapViz = (function(){
                       }
                       else{
                         //in theory we shouldn't get here because we're not drawing diagonal lines
-                        console.log('something went wrong');
                       }
                     }
                   }
@@ -847,8 +863,7 @@ var TubeMapViz = (function(){
               }
               currentCheckpoint = this.lines[l].stations.length;
             }
-          }
-          console.log(stationsDrawn);
+          }    
         }
       }
 
@@ -906,7 +921,7 @@ var TubeMapViz = (function(){
           if(words.length > 1){
             //set the max length
             //var longest = getLongestWord(words);
-            var longest = this.cellWidth * 5;
+            var longest = this.cellWidth * this.labelWrapThreshold;
             this.labelPaper.pen.font = this.fontWeight+" "+ this.fontSize +"px "+this.fontFamily;
             var longestSize = this.labelPaper.pen.measureText(longest);
             var longestLine = 0;
@@ -915,14 +930,17 @@ var TubeMapViz = (function(){
             for (var i=0;i<words.length;i++){
               var lineLength = this.labelPaper.pen.measureText(line+" "+words[i]);
               if(lineLength.width<=longest || line.split(" ").length <= 1){
+                if(line.split("")[line.length-1]!=" "){
+                  line += " ";
+                }
                 line += words[i];
-                if(i<words.length-1){
+                if(i<words.length){
                   line += " ";
                 }
               }
               else{
                 //we start a new line
-                lines.push(line);
+                lines.push(line.trim());
                 longestLine = lines[longestLine].length > lines[lines.length-1].length ? longestLine : lines.length-1;
                 line = words[i];
               }
@@ -972,7 +990,7 @@ var TubeMapViz = (function(){
         while(!foundValidY && tries < 1000){  //hopefully we don't span 500 rows (we change direction every 8 rows)
           //lets start by looking down
           for(var i=0;i<8;i++){
-            if(!this.grid[x][this.baseY + (i*iteration)].occupied){
+            if(this.grid[x][this.baseY + (i*iteration)] && !this.grid[x][this.baseY + (i*iteration)].occupied){
               allocatedY = this.baseY + (i*iteration);
               foundValidY = true;
               return allocatedY;
@@ -981,7 +999,7 @@ var TubeMapViz = (function(){
           }
           //then we try looking up
           for(var i=0;i<8;i++){
-            if(!this.grid[x][this.baseY - (i*iteration)].occupied){
+            if(this.grid[x][this.baseY - (i*iteration)] && !this.grid[x][this.baseY - (i*iteration)].occupied){
               allocatedY = this.baseY - (i*iteration);
               foundValidY = true;
               return allocatedY;
@@ -1030,15 +1048,12 @@ var TubeMapViz = (function(){
         var mapWidth = this.boundRight -  this.boundLeft;
         var mapHeight = this.boundBottom - this.boundTop;
         if(mapWidth < this.width){
-          this.posX = (this.width - mapWidth) / 2;
+          this.posX = ((this.width - mapWidth) / 2);
         }
         else{
-          this.posX = 0;
+          this.posX = (0 - this.boundLeft) + 30;
         }
         this.posY = ((this.height - mapHeight) / 2) - this.boundTop;
-        console.log('height '+this.height);
-        console.log('top '+this.boundTop);
-        console.log('bottom ' +this.boundBottom);
       }
 
     },
@@ -1092,12 +1107,13 @@ var TubeMapViz = (function(){
         if(panning && panning == true){
           //reset linesdrawn to 0 otherwise our lines will offset for every pixel we move
           for(var s in this.stations){
-            this.stations[s].linesDrawn = 0;
+            this.stations[s].vLinesDrawn = 0;
+            this.stations[s].hLinesDrawn = 0;
           }
         }
         this.linePaper.canvas.width = this.width;
         this.linePaper.pen.translate(this.posX, this.posY);
-        var currX, currY, newX, newY, adjustmentX, adjustmentY;
+        var currX, currY, newX, newY, adjustmentX, adjustmentY, adjustedH, adjustedV, directionOfLine, hOdd, vOdd;
         for (var l in this.lines){
           var stations = this.lines[l].stations;
           currX = this.stations[stations[0].name].gridLoc.center.x;
@@ -1105,59 +1121,90 @@ var TubeMapViz = (function(){
           adjustmentX = 0;
           adjustmentY = 0;
           for (var i=0;i<stations.length;i++){
+            adjusted = false;
             this.linePaper.pen.beginPath();
             //check to see if this and the next station are shared
             if(this.stations[stations[i].name].lines.length > 1 && stations[i+1] && (this.stations[stations[i+1].name] && this.stations[stations[i+1].name].lines.length>1)){
               this.linePaper.pen.moveTo((currX+adjustmentX), (currY-adjustmentY));
+              directionOfLine = (this.stations[stations[i].name].gridLoc.center.x != this.stations[stations[i+1].name].gridLoc.center.x) ? "h" : "v";
               if(this.stations[stations[i].name].gridLoc.center.x != this.stations[stations[i+1].name].gridLoc.center.x){
-                //the 2 stations do not run vertically so we can adjust the Y axis
-                adjustmentY = (this.lineSpacing * this.stations[stations[i].name].linesDrawn);
-                if(this.stations[stations[i].name].gridLoc.center.y != this.stations[stations[i+1].name].gridLoc.center.y){
-                  //the 2 stations do not run horizontally either so we adjust both axis
-                  adjustmentX = ((this.lineSpacing/2) * this.stations[stations[i].name].linesDrawn);
+                hOdd = (this.stations[stations[i].name].hOddLinesDrawn <  this.stations[stations[i].name].hEvenLinesDrawn) == true ? 1 : -1;
+                vOdd = (this.stations[stations[i].name].vOddLinesDrawn <  this.stations[stations[i].name].vEvenLinesDrawn) == true ? 1 : -1;
+                //the 2 stations run horizontally so we can adjust the Y axis
+                if(vOdd==1){
+                  adjustmentY = (this.lineSpacing * this.stations[stations[i].name].vOddLinesDrawn)*vOdd;
                 }
+                else{
+                  adjustmentY = (this.lineSpacing * this.stations[stations[i].name].vEvenLinesDrawn)*vOdd;
+                }
+                if(this.stations[stations[i].name].gridLoc.center.y != this.stations[stations[i+1].name].gridLoc.center.y){
+                  //the 2 stations run vertically either so we adjust both axis
+                  if(hOdd==1){
+                    adjustmentX = ((this.lineSpacing/2) * this.stations[stations[i].name].hOddLinesDrawn)*hOdd;
+                  }
+                  else{
+                    adjustmentX = ((this.lineSpacing/2) * this.stations[stations[i].name].hEvenLinesDrawn)*hOdd;
+                  }
+                }
+                adjustedH = (adjustmentX != 0);
+                adjustedV = (adjustmentY != 0);
               }
               else{
-                //we shift to the right
-                adjustmentX = (this.lineSpacing * this.stations[stations[i].name].linesDrawn);
+                //we shift to the left
+                vOdd = (this.stations[stations[i].name].vOddLinesDrawn <  this.stations[stations[i].name].vEvenLinesDrawn) == true ? 1 : -1;
+                hOdd = (this.stations[stations[i].name].hOddLinesDrawn <  this.stations[stations[i].name].hEvenLinesDrawn) == true ? 1 : -1;
+                if(vOdd==1){
+                  adjustmentY = (this.lineSpacing * this.stations[stations[i].name].vOddLinesDrawn)*vOdd;
+                }
+                else {
+                  adjustmentY = (this.lineSpacing * this.stations[stations[i].name].vEvenLinesDrawn)*vOdd;
+                }
                 if(this.stations[stations[i].name].gridLoc.center.x != this.stations[stations[i+1].name].gridLoc.center.x){
                   //we shift to the right
-                  adjustmentY = (this.lineSpacing * this.stations[stations[i].name].linesDrawn);
+                  if(hOdd==1){
+                    adjustmentY = (this.lineSpacing * this.stations[stations[i].name].hOddLinesDrawn)*hOdd;
+                  }
+                  else {
+                    adjustmentY = (this.lineSpacing * this.stations[stations[i].name].hLinesDrawn)*hOdd;
+                  }
                 }
+                adjustedH = (adjustmentX != 0);
+                adjustedV = (adjustmentY != 0);
               }
               if(i>0){
                 this.linePaper.pen.lineTo((currX+adjustmentX), (currY-adjustmentY));
                 this.linePaper.pen.stroke();
               }
-              this.stations[stations[i].name].linesDrawn++;
+              //this.stations[stations[i].name].linesDrawn++;
               //this.pen.moveTo((currX+adjustmentX), (currY-adjustmentY));
             }
             else if(this.stations[stations[i].name].lines.length > 1 && stations[i+1] && (this.stations[stations[i+1].name] && this.stations[stations[i+1].name].lines.length==1)){
-              this.linePaper.pen.moveTo((currX+adjustmentX), (currY-adjustmentY));
-              if(this.stations[stations[i].name].gridLoc.center.x != this.stations[stations[i+1].name].gridLoc.center.x){
-                //the 2 stations do not run vertically so we can reset the Y adjustment
-                adjustmentX += adjustmentY;
-                adjustmentY = 0;
-                //adjustmentX += (this.lineWidth*this.stations[stations[i].name].linesDrawn);
-              }
-              if(this.stations[stations[i].name].gridLoc.center.y != this.stations[stations[i+1].name].gridLoc.center.y){
-                //the 2 stations do not run vertically so we can reset the X adjustment
-                adjustmentY += adjustmentX;
+              this.linePaper.pen.moveTo((currX+adjustmentX), (currY+adjustmentY));
+              // if(this.stations[stations[i].name].gridLoc.center.x != this.stations[stations[i+1].name].gridLoc.center.x){
+              //   //the 2 stations run horizontally so we can reset the Y adjustment
+              //   isOdd = (this.stations[stations[i].name].hLinesDrawn % 2) == true ? -1 : 1;
+              //   adjustmentY += adjustmentX;
+              //   adjustmentX = 0;
+              // }
+              // if(this.stations[stations[i].name].gridLoc.center.y != this.stations[stations[i+1].name].gridLoc.center.y){
+              //   //the 2 stations run vertically so we can reset the Y adjustment
+              //   isOdd = (this.stations[stations[i].name].vLinesDrawn % 2) == true ? -1 : 1;
                 adjustmentX = 0;
-                //adjustmentY += (this.lineWidth*this.stations[stations[i].name].linesDrawn);
-              }
-              this.stations[stations[i].name].linesDrawn++;
-              this.linePaper.pen.lineTo((currX+adjustmentX), (currY-adjustmentY));
+                adjustmentY = 0;
+              //}
+              adjustedH = (adjustmentX != 0);
+              adjustedV = (adjustmentY != 0);
+              //this.stations[stations[i].name].linesDrawn++;
+              this.linePaper.pen.lineTo((currX+adjustmentX), (currY+adjustmentY));
 
               this.linePaper.pen.stroke();
             }
 
-            this.linePaper.pen.moveTo((currX+adjustmentX), (currY-adjustmentY));
-            // this.stations[this.lines[l].stations[i].name].gridLoc.center = {
-            //   x: (currX+adjustmentX),
-            //   y: (currY+adjustmentY)
-            // };
-            if(Array.isArray(this.colours)){
+            this.linePaper.pen.moveTo((currX+adjustmentX), (currY+adjustmentY));
+            if(this.lines[l].colour){
+              this.linePaper.pen.strokeStyle = this.lines[l].colour;
+            }
+            else if(Array.isArray(this.colours)){
               this.linePaper.pen.strokeStyle = this.colours[l];
             }
             else if(this.colours[this.lines[l].name]){
@@ -1167,7 +1214,7 @@ var TubeMapViz = (function(){
               this.linePaper.pen.strokeStyle = "black";
             }
             if(stations[i].status==0){
-              this.linePaper.pen.strokeStyle = "#E2E2E2";
+              this.linePaper.pen.strokeStyle = this.inactiveColour;
             }
             this.linePaper.pen.lineWidth = this.lineWidth;
             this.linePaper.pen.lineJoin = 'round';
@@ -1176,9 +1223,51 @@ var TubeMapViz = (function(){
             if(stations[i+1]){
               currX = this.stations[stations[i+1].name].gridLoc.center.x;
               currY = this.stations[stations[i+1].name].gridLoc.center.y;
-
-              this.linePaper.pen.lineTo((currX+adjustmentX), (currY-adjustmentY));
+              if(stations[i].status==0 || stations[i+1].status==0){
+                this.linePaper.pen.strokeStyle = this.inactiveColour;
+              }
+              this.linePaper.pen.lineTo((currX+adjustmentX), (currY+adjustmentY));
               this.linePaper.pen.stroke();
+            }
+            if(directionOfLine == "h"){
+              // if(adjustedH){
+              //   console.log("adj H");
+                if(hOdd == 1){
+                  this.stations[stations[i].name].hOddLinesDrawn++;
+                }
+                else{
+                  this.stations[stations[i].name].hEvenLinesDrawn++;
+                }
+              // }
+              // if(adjustedV){
+              //   console.log("adj V");
+                if(vOdd == 1){
+                  this.stations[stations[i].name].vOddLinesDrawn++;
+                }
+                else{
+                  this.stations[stations[i].name].vEvenLinesDrawn++;
+                }
+              // }
+            }
+            else if(directionOfLine == "v"){
+              // if(adjustedH){
+              //   console.log("adj H");
+                if(hOdd == 1){
+                  this.stations[stations[i].name].hOddLinesDrawn++;
+                }
+                else{
+                  this.stations[stations[i].name].hEvenLinesDrawn++;
+                }
+              // }
+              // if(adjustedV){
+              //   console.log("adj V");
+                if(vOdd == 1){
+                  this.stations[stations[i].name].vOddLinesDrawn++;
+                }
+                else{
+                  this.stations[stations[i].name].vEvenLinesDrawn++;
+                }
+              // }
             }
           }
         }
@@ -1187,35 +1276,91 @@ var TubeMapViz = (function(){
     },
     drawStations:{
       value: function(){
+        var that = this;
         this.stationPaper.canvas.width = this.width;
         this.stationPaper.pen.translate(this.posX, this.posY);
+        var stationsHandled = [];
+        for(var l=0; l<this.lines.length;l++){
+          for(var i=0; i<this.lines[l].stations.length;i++){
+            if(this.stations[this.lines[l].stations[i].name].gridLoc && stationsHandled.indexOf(that.lines[l].stations[i].name)==-1){
+              var station = this.stations[this.lines[l].stations[i].name]
+              var x = station.gridLoc.center.x;
+              var y = station.gridLoc.center.y;
+              this.stationPaper.pen.beginPath();
+              this.stationPaper.pen.strokeStyle = this.stationColour;
+              this.stationPaper.pen.fillStyle = "white";
+              if(station.status==0){
+                this.stationPaper.pen.strokeStyle = this.inactiveColour;
+              }
+              this.stationPaper.pen.lineWidth = this.stationThickness;
+              var qState = this.lines[l].stations[i].qState;
+
+              var radius = Math.ceil(this.stationRadius - (this.lineWidth/2));
+              if(this.lines[l].stations[i].mode=="highlight"){          
+                radius = radius * this.highlightScale;
+              }
+              if(this.lines[l].stations[i].custom){
+                var custom = this.lines[l].stations[i].custom;
+                if(custom.fill){
+                  this.stationPaper.pen.fillStyle = custom.fill;
+                }
+                if(custom.stroke){
+                  this.stationPaper.pen.strokeStyle = custom.stroke;
+                }
+                if(custom.scale){
+                  radius = radius * custom.scale;
+                }
+              }
+              this.stationPaper.pen.arc(x, y, radius, 0, Math.PI * 2);
+              this.stationPaper.pen.stroke();
+              this.stationPaper.pen.fill();
+              stationsHandled.push(that.lines[l].stations[i].name);
+            }
+          }
+        }
+
+      }
+
+    },
+    drawImages:{
+      value: function(){
+        var that = this;
+        this.imagePaper.canvas.width = this.width;
+        this.imagePaper.pen.translate(this.posX, this.posY);
         for(var l=0; l<this.lines.length;l++){
           for(var i=0; i<this.lines[l].stations.length;i++){
             if(this.stations[this.lines[l].stations[i].name].gridLoc){
               var station = this.stations[this.lines[l].stations[i].name]
               var x = station.gridLoc.center.x;
               var y = station.gridLoc.center.y;
-              // this.stationPaper.pen.save();
-              // this.stationPaper.pen.moveTo(this.posX, this.posY);
-              this.stationPaper.pen.beginPath();
-              this.stationPaper.pen.strokeStyle = this.stationColour;
-              if(station.status==0){
-                this.stationPaper.pen.strokeStyle = "#E2E2E2";
-              }
-              this.stationPaper.pen.lineWidth = this.stationThickness;
-              var qState = this.lines[l].stations[i].qState;
-              this.stationPaper.pen.fillStyle = "white";
               var radius = Math.ceil(this.stationRadius - (this.lineWidth/2));
-              if(station.status==3){
-                radius = radius * this.highlightScale;
+              this.imagePaper.pen.beginPath();
+              if(this.lines[l].stations[i].custom){
+                var custom = this.lines[l].stations[i].custom;
+                if(custom.image){
+                  if(custom.scale){
+                    radius = radius * custom.scale;
+                  }
+                  if(custom.imageSize){
+                    radius = (custom.imageSize / 2);
+                  }
+                  renderImage(x, y, custom.image, radius)
+                }
               }
-              this.stationPaper.pen.arc(x, y, radius, 0, Math.PI * 2);
-              //this.stationPaper.pen.scale(1+(this.zoomSize/10), 1+(this.zoomSize/10));
-              this.stationPaper.pen.stroke();
-              this.stationPaper.pen.fill()
-              // this.stationPaper.pen.restore();
             }
           }
+        }
+
+        function renderImage(x, y, url, size){
+          var im = new Image();
+          im.onload = function(){
+            var width = im.width;
+            var height = im.height;
+            var newWidth = (size*2);
+            var newHeight = (size*2);
+            that.imagePaper.pen.drawImage(im, (x - (newWidth/2)), (y-(newHeight/2)) , newWidth, newHeight);
+          };
+          im.src = url;
         }
       }
 
@@ -1223,6 +1368,7 @@ var TubeMapViz = (function(){
     drawLabels:{
       value: function(){
         this.labelPaper.canvas.width = this.width;
+        //this.labelPaper.pen.setTransform(this.PIXEL_RATIO, 0, 0, this.PIXEL_RATIO, 0, 0);
         this.labelPaper.pen.translate(this.posX, this.posY);
         for(var s in this.stations){
           if(this.stations[s].labelLoc){
@@ -1243,48 +1389,80 @@ var TubeMapViz = (function(){
               this.labelPaper.pen.font = this.fontWeight+" "+ fontSize +"px "+this.fontFamily;
               this.labelPaper.pen.textAlign = "left";
               this.labelPaper.pen.textBaseline = "middle";
-              this.labelPaper.pen.fillStyle = "black";        
+              this.labelPaper.pen.fillStyle = "black";
               if(station.status==0){
-                this.labelPaper.pen.fillStyle = "#E2E2E2";
+                this.labelPaper.pen.fillStyle = this.inactiveColour;
               }
               this.labelPaper.pen.translate(x, y);
               this.labelPaper.pen.rotate(-45*Math.PI / 180);
 
-              for(var i=0;i<this.stations[s].label.lines.length;i++){
-                this.labelPaper.pen.fillText(this.stations[s].label.lines[i], textX, textY);
-                textY+= this.labelLineHeight;
+              if(!station.custom || !station.custom.drawLabel==undefined || station.custom.drawLabel!==false){
+                for(var i=0;i<this.stations[s].label.lines.length;i++){
+                  this.labelPaper.pen.fillText(this.stations[s].label.lines[i], textX, textY);
+                  textY+= this.labelLineHeight;
+                }
               }
               //this.pen.fillStyle = "white";
               //this.pen.lineWidth = 3;
 
               //this.pen.arc(x, y, this.stationRadius, 0, Math.PI * 2);
               //this.pen.stroke();
-              this.labelPaper.pen.fill()
-              this.labelPaper.pen.restore()
+
+              this.labelPaper.pen.fill();
+              this.labelPaper.pen.restore();
           }
         }
       }
 
     },
     createEventListeners:{
-      value: function(){
+      value: function(element){
         var that = this;
+        //interaction layer
+        if(!element){
+          if(this.eventPaper){
+            element = this.eventPaper.canvas.parentElement;
+          }
+          else{
+            return;
+          }
+        }
+        //first remove the existing canvas
+        if(this.eventPaper && this.eventPaper.canvas){
+          this.eventPaper.canvas.remove();
+        }
+        //then add a new one
+        var eventCanvas = document.createElement('canvas');
+        this.eventPaper = {
+          canvas: eventCanvas,
+          pen: eventCanvas.getContext('2d')
+        };
+        this.eventPaper.canvas.style.position = "absolute";
+        this.eventPaper.canvas.style.top = "0px";
+        this.eventPaper.canvas.style.left = "0px";
+        this.eventPaper.canvas.style.zIndex = "60";
+        this.eventPaper.canvas.width = this.width;
+        this.eventPaper.canvas.height = this.height;
+        element.appendChild(this.eventPaper.canvas);
+
         var events = new Events(this.eventPaper.canvas, this.eventPaper.pen);
+
         this.eventPaper.canvas.width = this.width;
         this.eventPaper.pen.translate(this.posX, this.posY);
         var context = events.getContext();
+
         events.setStage(function(){
           this.clear();
+          var stationsHandled = [];
           for(var l=0; l<that.lines.length;l++){
             for(var i=0; i<that.lines[l].stations.length;i++){
-              if(that.stations[that.lines[l].stations[i].name].gridLoc){
-                var station = that.stations[that.lines[l].stations[i].name]
+              if(that.stations[that.lines[l].stations[i].name].gridLoc && stationsHandled.indexOf(that.lines[l].stations[i].name)==-1){
+                var station = that.stations[that.lines[l].stations[i].name];
                 var x = station.gridLoc.locs.a.x;
                 var y = station.gridLoc.locs.a.y;
 
                 this.beginRegion();
                 context.beginPath();
-                //context.moveTo(x,y);
 
                 context.strokeStyle = "transparent";
                 if(that.debug){
@@ -1295,30 +1473,13 @@ var TubeMapViz = (function(){
                 context.closePath();
                 context.stroke();
 
-                this.addRegionEventListener("mousedown", that.stationClicked.bind(that, that.lines[l].stations[i], false));
+                this.addRegionEventListener("mousedown", that.preClick.bind(that, that.lines[l].stations[i], true));
+                this.addRegionEventListener("touchdown", that.preClick.bind(that, that.lines[l].stations[i], true));
                 this.addRegionEventListener("mouseover", that.highlightStation.bind(that, that.lines[l].stations[i], false));
                 this.addRegionEventListener("mouseout", that.removeStationHighlight.bind(that, that.lines[l].stations[i], false));
-                // this.addRegionEventListener("mousedown", function(){
-                //   that.stationClicked(station);
-                // });
-                // this.addRegionEventListener("mouseover", function(){
-                //   that.highlightStation(station);
-                // });
-                // this.addRegionEventListener("mouseout", function(){
-                //   that.removeStationHighlight(station);
-                // });
+
                 this.closeRegion();
-                // this.stationPaper.pen.beginPath();
-                // this.stationPaper.pen.moveTo(x,y);
-                //
-                // this.stationPaper.pen.strokeStyle = "black";
-                // this.stationPaper.pen.lineWidth = this.lineWidth;
-                // var qState = this.lines[l].stations[i].qState;
-                // this.stationPaper.pen.fillStyle = "white";
-                // var radius = Math.ceil(this.stationRadius - (this.lineWidth/2));
-                // this.stationPaper.pen.arc(x, y, radius, 0, Math.PI * 2);
-                // this.stationPaper.pen.stroke();
-                // this.stationPaper.pen.fill()
+                stationsHandled.push(that.lines[l].stations[i].name);
               }
             }
           }
@@ -1350,49 +1511,70 @@ var TubeMapViz = (function(){
       value: function(data, element, pan){
         //create the canvas elements
         this.createCanvases(element);
-        console.log('canvases ready');
-        if(data){
+        if(data && !data.target){   //data.target catches if data is an event
           //reset some of the values
           this.stations = {};
           this.grid = {};
           //build the station definition
           this.buildStationData(data);
-          console.log('stations ready');
+          if(this.debug==true){
+            console.log('stations ready');
+          }
           //evaluate the label requirements
           this.getLabelInfo();
-          console.log('labels ready');
+          if(this.debug==true){
+            console.log('labels ready');
+          }
           //calculate the initial grid
           //this.buildGrid();
-          console.log('grid ready');
+          if(this.debug==true){
+            console.log('grid ready');
+          }
           this.processFirstLine();
-          console.log('first line ready');
-          console.log(this.stations);
+          if(this.debug==true){
+            console.log('first line ready');
+          }
           this.processStations();
-          console.log('station positions ready');
+          if(this.debug==true){
+            console.log('station positions ready');
+          }
           //before drawing anything, calculate the outer co-ordinates of the map and if possible center it
           //if the map is wider than the available space it should be centered vertically and aligned left
           this.centerMap();
-          console.log('map transposed');
+          if(this.debug==true){
+            console.log('map transposed');
+          }
         }
         //draw the grid
         this.drawGrid();
-        console.log('grid drawn');
+        if(this.debug==true){
+          console.log('grid drawn');
+        }
         //draw the lines
         this.drawLines();
-        console.log('lines drawn');
+        if(this.debug==true){
+          console.log('lines drawn');
+        }
         //draw the stations
         this.drawStations();
-        console.log('stations drawn');
+        if(this.debug==true){
+          console.log('stations drawn');
+        }
+        //draw any images
+        this.drawImages();
+        if(this.debug==true){
+          console.log('images drawn');
+        }
         //draw the labels
         this.drawLabels();
-        console.log('labels drawn');
+        if(this.debug==true){
+          console.log('labels drawn');
+        }
         //create the map event listeners
-        this.createEventListeners();
-        console.log('events listening');
-        // if(!pan || pan==false){
-        //   this.setupPanning();
-        //   console.log('panning configured');
-        // }
+        this.createEventListeners(element);
+        if(this.debug==true){
+          console.log('events listening');
+        }
       }
 
     },
@@ -1400,6 +1582,7 @@ var TubeMapViz = (function(){
       value: [
         {
           name: "Line 1",
+          colour: "red",
           status: 1,
           stations: [
             {
@@ -1422,6 +1605,7 @@ var TubeMapViz = (function(){
         },
         {
           name: "Line 2",
+          colour: "blue",
           status: 1,
           stations: [
             {
@@ -1444,6 +1628,42 @@ var TubeMapViz = (function(){
         },
         {
           name: "Line 3",
+          colour: "yellow",
+          status: 1,
+          stations:[
+            {
+              name: "Station C",
+              status: 1
+            },
+            {
+              name: "Station D",
+              status: 1
+            },
+            {
+              name: "Station E",
+              status: 1
+            },
+            {
+              name: "Station F",
+              status: 1
+            },
+            {
+              name: "Station J",
+              status: 1
+            },
+            {
+              name: "Station K",
+              status: 1
+            },
+            {
+              name: "Station L",
+              status: 1
+            }
+          ]
+        },
+        {
+          name: "Line 4",
+          colour: "green",
           status: 1,
           stations: [
             {
@@ -1467,6 +1687,20 @@ var TubeMapViz = (function(){
       ]
 
     },
+    clickInProgress:{
+      value: false
+    },
+    preClick:{
+      value: function(station){
+        this.removeStationHighlight(station);
+        this.stationClicked(station);
+      }
+    },
+    postClick:{
+      value: function(){
+        this.clickInProgress = false;
+      }
+    },
     stationClicked:{
       writable: true,
       value: function(station){
@@ -1484,7 +1718,6 @@ var TubeMapViz = (function(){
     },
     removeStationHighlight:{
       value: function(station){
-        console.log('mouse out');
         if(!this.disableHighlighting){
           station.mode = "normal";
           this.drawStations();
@@ -1495,23 +1728,36 @@ var TubeMapViz = (function(){
     startPan: {
       value: function(event){
         var r = this.eventPaper.canvas.getBoundingClientRect();
-  			this.startPanX = (event.clientX - r.left) - this.posX;
-  			this.startPanY = (event.clientY - r.top) - this.posY;
+        if(event.type=="touchstart"){
+          this.startPanX = (event.touches[0].clientX - r.left) - this.posX;
+    			this.startPanY = (event.touches[0].clientY - r.top) - this.posY;
+        }
+        else {
+          this.startPanX = (event.clientX - r.left) - this.posX;
+    			this.startPanY = (event.clientY - r.top) - this.posY;
+        }        
         this.panning = true;
       }
     },
     endPan: {
       value: function(event){
-        this.panning = false;        
+        this.panning = false;
         this.createEventListeners();
       }
     },
     pan:{
       value: function(event){
+        event.preventDefault();
         if(this.panning){
           var r = this.eventPaper.canvas.getBoundingClientRect();
-          var x = event.clientX - r.left;
-		      var y = event.clientY - r.top;
+          if(event.type.indexOf("touch")!=-1){
+            var x = event.touches[0].clientX - r.left;
+  		      var y = event.touches[0].clientY - r.top;
+          }
+          else {
+            var x = event.clientX - r.left;
+  		      var y = event.clientY - r.top;
+          }
           this.posX = (x - this.startPanX);
           this.posY = (y - this.startPanY);
 
@@ -1519,6 +1765,7 @@ var TubeMapViz = (function(){
           this.drawLines(true);
           this.drawStations();
           this.drawLabels();
+          this.drawImages();
         }
       }
     },

@@ -4,17 +4,21 @@ var TubeMapViz = (function(){
   function TubeMapViz(options){
     options = options || {};
     this.debug = options.debug || false;
+    this.disableHighlighting = options.disableHighlighting || false;
     this.padding = options.padding || 30;
     this.stationRadius = options.stationRadius || 8;
     this.lineWidth = options.lineWidth || 5;
     this.lineSpacing = options.lineSpacing || 5;
     this.labelLineHeight = options.labelLineHeight || 13;
+    this.labelWrapThreshold = options.labelWrapThreshold || 4;
     this.fontSize = options.fontSize || 10;
     this.fontFamily = options.fontFamily || "Arial";
     this.fontWeight = options.fontWeight || "Normal";
     this.highlightScale = options.highlightScale || 1.3;
+    this.inactiveColour = options.inactiveColour || "#DDDDDD";
     this.stationColour = options.stationColour || "black";
     this.stationThickness = options.stationThickness || this.lineWidth;
+    this.stationClicked = options.stationClicked || this.stationClicked;
     this.colours = options.colours || [
       "#61A729",
       "#EE5A35",
@@ -22,9 +26,20 @@ var TubeMapViz = (function(){
       "yellow",
       "pink"
     ];
+    var ctx = document.createElement("canvas").getContext("2d"),
+        dpr = window.devicePixelRatio || 1,
+        bsr = ctx.webkitBackingStorePixelRatio ||
+              ctx.mozBackingStorePixelRatio ||
+              ctx.msBackingStorePixelRatio ||
+              ctx.oBackingStorePixelRatio ||
+              ctx.backingStorePixelRatio || 1;
+    this.PIXEL_RATIO = dpr / bsr;
   }
   TubeMapViz.prototype = Object.create(Object.prototype, {
     debug:{
+      writable: true
+    },
+    events:{
       writable: true
     },
     width:{
@@ -169,6 +184,9 @@ var TubeMapViz = (function(){
     drawStations:{
       include "drawStations.js"
     },
+    drawImages:{
+      include "drawImages.js"
+    },
     drawLabels:{
       include "drawLabels.js"
     },
@@ -183,6 +201,20 @@ var TubeMapViz = (function(){
     },
     sampleData:{
       include "sampleData.js"
+    },
+    clickInProgress:{
+      value: false
+    },
+    preClick:{
+      value: function(station){
+        this.removeStationHighlight(station);
+        this.stationClicked(station);
+      }
+    },
+    postClick:{
+      value: function(){
+        this.clickInProgress = false;
+      }
     },
     stationClicked:{
       writable: true,
@@ -201,7 +233,6 @@ var TubeMapViz = (function(){
     },
     removeStationHighlight:{
       value: function(station){
-        console.log('mouse out');
         if(!this.disableHighlighting){
           station.mode = "normal";
           this.drawStations();
@@ -212,23 +243,36 @@ var TubeMapViz = (function(){
     startPan: {
       value: function(event){
         var r = this.eventPaper.canvas.getBoundingClientRect();
-  			this.startPanX = (event.clientX - r.left) - this.posX;
-  			this.startPanY = (event.clientY - r.top) - this.posY;
+        if(event.type=="touchstart"){
+          this.startPanX = (event.touches[0].clientX - r.left) - this.posX;
+    			this.startPanY = (event.touches[0].clientY - r.top) - this.posY;
+        }
+        else {
+          this.startPanX = (event.clientX - r.left) - this.posX;
+    			this.startPanY = (event.clientY - r.top) - this.posY;
+        }        
         this.panning = true;
       }
     },
     endPan: {
       value: function(event){
-        this.panning = false;        
+        this.panning = false;
         this.createEventListeners();
       }
     },
     pan:{
       value: function(event){
+        event.preventDefault();
         if(this.panning){
           var r = this.eventPaper.canvas.getBoundingClientRect();
-          var x = event.clientX - r.left;
-		      var y = event.clientY - r.top;
+          if(event.type.indexOf("touch")!=-1){
+            var x = event.touches[0].clientX - r.left;
+  		      var y = event.touches[0].clientY - r.top;
+          }
+          else {
+            var x = event.clientX - r.left;
+  		      var y = event.clientY - r.top;
+          }
           this.posX = (x - this.startPanX);
           this.posY = (y - this.startPanY);
 
@@ -236,6 +280,7 @@ var TubeMapViz = (function(){
           this.drawLines(true);
           this.drawStations();
           this.drawLabels();
+          this.drawImages();
         }
       }
     },

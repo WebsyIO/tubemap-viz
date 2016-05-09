@@ -42,7 +42,7 @@ Events.prototype.getCanvasPos = function(){
     var obj = this.getCanvas();
     var top = 0;
     var left = 0;
-    while (obj.tagName != "BODY") {
+    while (obj && obj.tagName && obj.tagName != "BODY") {
         top += obj.offsetTop;
         left += obj.offsetLeft;
         obj = obj.offsetParent;
@@ -117,18 +117,18 @@ Events.prototype.listen = function(){
 
     // mobile events
     this.canvas.addEventListener("touchstart", function(evt){
-        evt.preventDefault();
+        //evt.preventDefault();
         that.touchStart = true;
         that.reset(evt);
     }, false);
 
     this.canvas.addEventListener("touchmove", function(evt){
-        evt.preventDefault();
+        //evt.preventDefault();
         that.reset(evt);
     }, false);
 
     this.canvas.addEventListener("touchend", function(evt){
-        evt.preventDefault();
+        //evt.preventDefault();
         that.touchEnd = true;
         that.reset(evt);
     }, false);

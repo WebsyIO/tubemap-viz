@@ -1,21 +1,50 @@
-value: function(){
+value: function(element){
   var that = this;
+  //interaction layer
+  if(!element){
+    if(this.eventPaper){
+      element = this.eventPaper.canvas.parentElement;
+    }
+    else{
+      return;
+    }
+  }
+  //first remove the existing canvas
+  if(this.eventPaper && this.eventPaper.canvas){
+    this.eventPaper.canvas.remove();
+  }
+  //then add a new one
+  var eventCanvas = document.createElement('canvas');
+  this.eventPaper = {
+    canvas: eventCanvas,
+    pen: eventCanvas.getContext('2d')
+  };
+  this.eventPaper.canvas.style.position = "absolute";
+  this.eventPaper.canvas.style.top = "0px";
+  this.eventPaper.canvas.style.left = "0px";
+  this.eventPaper.canvas.style.zIndex = "60";
+  this.eventPaper.canvas.width = this.width;
+  this.eventPaper.canvas.height = this.height;
+  element.appendChild(this.eventPaper.canvas);
+
   var events = new Events(this.eventPaper.canvas, this.eventPaper.pen);
+
   this.eventPaper.canvas.width = this.width;
   this.eventPaper.pen.translate(this.posX, this.posY);
   var context = events.getContext();
+
   events.setStage(function(){
     this.clear();
+    var stationsHandled = [];
     for(var l=0; l<that.lines.length;l++){
       for(var i=0; i<that.lines[l].stations.length;i++){
-        if(that.stations[that.lines[l].stations[i].name].gridLoc){
-          var station = that.stations[that.lines[l].stations[i].name]
+        if(that.stations[that.lines[l].stations[i].name].gridLoc && stationsHandled.indexOf(that.lines[l].stations[i].name)==-1){
+          var station = that.stations[that.lines[l].stations[i].name];
           var x = station.gridLoc.locs.a.x;
           var y = station.gridLoc.locs.a.y;
 
           this.beginRegion();
           context.beginPath();
-          //context.moveTo(x,y);
 
           context.strokeStyle = "transparent";
           if(that.debug){
@@ -26,30 +55,13 @@ value: function(){
           context.closePath();
           context.stroke();
 
-          this.addRegionEventListener("mousedown", that.stationClicked.bind(that, that.lines[l].stations[i], false));
+          this.addRegionEventListener("mousedown", that.preClick.bind(that, that.lines[l].stations[i], true));
+          this.addRegionEventListener("touchdown", that.preClick.bind(that, that.lines[l].stations[i], true));
           this.addRegionEventListener("mouseover", that.highlightStation.bind(that, that.lines[l].stations[i], false));
           this.addRegionEventListener("mouseout", that.removeStationHighlight.bind(that, that.lines[l].stations[i], false));
-          // this.addRegionEventListener("mousedown", function(){
-          //   that.stationClicked(station);
-          // });
-          // this.addRegionEventListener("mouseover", function(){
-          //   that.highlightStation(station);
-          // });
-          // this.addRegionEventListener("mouseout", function(){
-          //   that.removeStationHighlight(station);
-          // });
+
           this.closeRegion();
-          // this.stationPaper.pen.beginPath();
-          // this.stationPaper.pen.moveTo(x,y);
-          //
-          // this.stationPaper.pen.strokeStyle = "black";
-          // this.stationPaper.pen.lineWidth = this.lineWidth;
-          // var qState = this.lines[l].stations[i].qState;
-          // this.stationPaper.pen.fillStyle = "white";
-          // var radius = Math.ceil(this.stationRadius - (this.lineWidth/2));
-          // this.stationPaper.pen.arc(x, y, radius, 0, Math.PI * 2);
-          // this.stationPaper.pen.stroke();
-          // this.stationPaper.pen.fill()
+          stationsHandled.push(that.lines[l].stations[i].name);
         }
       }
     }

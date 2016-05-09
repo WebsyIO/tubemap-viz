@@ -8,7 +8,11 @@ value: function(lines){
         //no need for a line to check against itself
         for(var lS in lines[l].stations){
           if(!this.stations[lines[l].stations[lS].name]){
-            this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], linesDrawn:0, status:lines[l].stations[lS].status, mode:"normal"};
+            //this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hLinesDrawn:0, vLinesDrawn:0, status:lines[l].stations[lS].status, mode:"normal"};
+            this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hOddLinesDrawn:0, hEvenLinesDrawn:0, vOddLinesDrawn:0, vEvenLinesDrawn:0, mode:"normal"};
+            for (var p in lines[l].stations[lS]){
+              this.stations[lines[l].stations[lS].name][p] = lines[l].stations[lS][p];
+            }
           }
           for (var l2S in lines[l2].stations){
             if(lines[l].stations[lS].name == lines[l2].stations[l2S].name){

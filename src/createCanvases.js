@@ -2,8 +2,9 @@ value: function(element, data){
   if(element){
     element.innerHTML = "";
     if(!this.listening){
+      console.log('adding event listeners to element');
       element.addEventListener('resize', this.render.bind(this), false);
-      element.addEventListener('wheel', this.zoom.bind(this), false);
+      //element.addEventListener('wheel', this.zoom.bind(this), false);
       element.addEventListener('mousedown', this.startPan.bind(this), false);
       element.addEventListener('touchstart', this.startPan.bind(this), false);
       //element.addEventListener('mouseenter', this.startPan.bind(this), false);
@@ -14,6 +15,13 @@ value: function(element, data){
       element.addEventListener('touchend', this.endPan.bind(this), false);
       element.addEventListener('mouseout', this.endPan.bind(this), false);
       element.addEventListener('touchleave', this.endPan.bind(this), false);
+      if (!('remove' in Element.prototype)) {
+          Element.prototype.remove = function() {
+              if (this.parentNode) {
+                  this.parentNode.removeChild(this);
+              }
+          };
+      }
       this.listening = true;
     }
     var height = element.clientHeight, width = element.clientWidth;
@@ -65,6 +73,19 @@ value: function(element, data){
     this.stationPaper.canvas.width = width;
     this.stationPaper.canvas.height = height;
     element.appendChild(this.stationPaper.canvas);
+    //image canvas
+    var imageCanvas = document.createElement('canvas');
+    this.imagePaper = {
+      canvas: imageCanvas,
+      pen: imageCanvas.getContext('2d')
+    };
+    this.imagePaper.canvas.style.position = "absolute";
+    this.imagePaper.canvas.style.top = "0px";
+    this.imagePaper.canvas.style.left = "0px";
+    this.imagePaper.canvas.style.zIndex = "30";
+    this.imagePaper.canvas.width = width;
+    this.imagePaper.canvas.height = height;
+    element.appendChild(this.imagePaper.canvas);
     //label canvas
     var labelCanvas = document.createElement('canvas');
     this.labelPaper = {
@@ -75,8 +96,10 @@ value: function(element, data){
     this.labelPaper.canvas.style.top = "0px";
     this.labelPaper.canvas.style.left = "0px";
     this.labelPaper.canvas.style.zIndex = "40";
-    this.labelPaper.canvas.width = width;
-    this.labelPaper.canvas.height = height;
+    this.labelPaper.canvas.width = width;// * this.PIXEL_RATIO;
+    this.labelPaper.canvas.height = height;// * this.PIXEL_RATIO;
+    // this.labelPaper.canvas.style.width = width + "px";
+    // this.labelPaper.canvas.style.height = height + "px";
     element.appendChild(this.labelPaper.canvas);
     //panning layer
     var panningCanvas = document.createElement('canvas');
@@ -91,19 +114,7 @@ value: function(element, data){
     this.panningPaper.canvas.width = width;
     this.panningPaper.canvas.height = height;
     element.appendChild(this.panningPaper.canvas);
-    //interaction layer
-    var eventCanvas = document.createElement('canvas');
-    this.eventPaper = {
-      canvas: eventCanvas,
-      pen: eventCanvas.getContext('2d')
-    };
-    this.eventPaper.canvas.style.position = "absolute";
-    this.eventPaper.canvas.style.top = "0px";
-    this.eventPaper.canvas.style.left = "0px";
-    this.eventPaper.canvas.style.zIndex = "60";
-    this.eventPaper.canvas.width = width;
-    this.eventPaper.canvas.height = height;
-    element.appendChild(this.eventPaper.canvas);
+
     this.height = height;
     this.width = width;
   }
