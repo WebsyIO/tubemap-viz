@@ -1537,8 +1537,8 @@ var TubeMapViz = (function(){
     sampleData:{
       value: [
         {
-          name: "Line 1",
-          colour: "red",
+          name: "Line1",
+          colour: "#ff7373",
           status: 1,
           stations: [
             {
@@ -1560,8 +1560,8 @@ var TubeMapViz = (function(){
           ]
         },
         {
-          name: "Line 2",
-          colour: "blue",
+          name: "Line2",
+          colour: "#ffd546",
           status: 1,
           stations: [
             {
@@ -1583,8 +1583,8 @@ var TubeMapViz = (function(){
           ]
         },
         {
-          name: "Line 3",
-          colour: "yellow",
+          name: "Line3",
+          colour: "#d47dbe",
           status: 1,
           stations:[
             {
@@ -1618,8 +1618,8 @@ var TubeMapViz = (function(){
           ]
         },
         {
-          name: "Line 4",
-          colour: "green",
+          name: "Line4",
+          colour: "#68b5de",
           status: 1,
           stations: [
             {
