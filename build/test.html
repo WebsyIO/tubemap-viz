@@ -5,12 +5,18 @@
     <title></title>
   </head>
   <body>
-    <div id="map" class="" style="width: 960px; height: 640px;">
+    <div id="map" class="" style="width: 1260px; height: 640px;">
 
     </div>
     <script type="text/javascript" src="./TubeMapViz.js"></script>
     <script type="text/javascript">
-      var map = new TubeMapViz();
+      var map = new TubeMapViz({
+        stationRadius: 15,
+        stationThickness: 10,
+        lineWidth: 8,
+        lineSpacing: 8,
+        fontSize: 14
+      });
       map.render(map.sampleData, document.getElementById("map"));
     </script>
   </body>
