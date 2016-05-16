@@ -10,6 +10,7 @@ var TubeMapViz = (function(){
     this.lineWidth = options.lineWidth || 5;
     this.lineSpacing = options.lineSpacing || 5;
     this.labelLineHeight = options.labelLineHeight || 13;
+    this.labelColour = options.labelColour || "black";
     this.labelWrapThreshold = options.labelWrapThreshold || 4;
     this.fontSize = options.fontSize || 10;
     this.fontFamily = options.fontFamily || "Arial";
@@ -19,6 +20,12 @@ var TubeMapViz = (function(){
     this.stationColour = options.stationColour || "black";
     this.stationThickness = options.stationThickness || this.lineWidth;
     this.stationClicked = options.stationClicked || this.stationClicked;
+    this.customLegend = options.customLegend || null;
+    this.showLegend = options.showLegend || true;
+    this.legendFontSize = options.legendFontSize || this.fontSize;
+    this.legendFontWeight = options.legendFontWeight || this.fontWeight;
+    this.legendFontColour = options.legendFontColour || options.labelColour;
+    this.legendBackgroundColour = options.legendBackgroundColour || "rgba(255,255,255,0.7)";
     this.colours = options.colours || [
       "#61A729",
       "#EE5A35",
@@ -151,6 +158,9 @@ var TubeMapViz = (function(){
     buildStationData:{
       include "buildStationData.js"
     },
+    buildLegendData:{
+      include "buildLegendData.js"
+    },
     processFirstLine:{
       include "processFirstLine.js"
     },
@@ -189,6 +199,9 @@ var TubeMapViz = (function(){
     },
     drawLabels:{
       include "drawLabels.js"
+    },
+    drawLegend:{
+      include "drawLegend.js"
     },
     createEventListeners:{
       include "createEventListeners.js"
@@ -250,7 +263,7 @@ var TubeMapViz = (function(){
         else {
           this.startPanX = (event.clientX - r.left) - this.posX;
     			this.startPanY = (event.clientY - r.top) - this.posY;
-        }        
+        }
         this.panning = true;
       }
     },

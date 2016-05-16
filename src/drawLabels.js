@@ -21,7 +21,7 @@ value: function(){
         this.labelPaper.pen.font = this.fontWeight+" "+ fontSize +"px "+this.fontFamily;
         this.labelPaper.pen.textAlign = "left";
         this.labelPaper.pen.textBaseline = "middle";
-        this.labelPaper.pen.fillStyle = "black";
+        this.labelPaper.pen.fillStyle = this.labelColour;
         if(station.status==0){
           this.labelPaper.pen.fillStyle = this.inactiveColour;
         }

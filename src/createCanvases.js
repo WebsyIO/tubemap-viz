@@ -114,6 +114,19 @@ value: function(element, data){
     this.panningPaper.canvas.width = width;
     this.panningPaper.canvas.height = height;
     element.appendChild(this.panningPaper.canvas);
+    //legend layer  --for now we're sitting this underneath the panning layer
+    var legendCanvas = document.createElement('canvas');
+    this.legendPaper = {
+      canvas: legendCanvas,
+      pen: legendCanvas.getContext('2d')
+    };
+    this.legendPaper.canvas.style.position = "absolute";
+    this.legendPaper.canvas.style.top = "0px";
+    this.legendPaper.canvas.style.left = "0px";
+    this.legendPaper.canvas.style.zIndex = "45";
+    this.legendPaper.canvas.width = width;
+    this.legendPaper.canvas.height = height;
+    element.appendChild(this.legendPaper.canvas);
 
     this.height = height;
     this.width = width;
