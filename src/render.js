@@ -4,12 +4,15 @@ value: function(data, element, pan){
   if(data && !data.target){   //data.target catches if data is an event
     //reset some of the values
     this.stations = {};
+    this.legend = [];
     this.grid = {};
     //build the station definition
     this.buildStationData(data);
     if(this.debug==true){
       console.log('stations ready');
     }
+    //build the legend
+    this.buildLegendData();
     //evaluate the label requirements
     this.getLabelInfo();
     if(this.debug==true){
@@ -59,6 +62,11 @@ value: function(data, element, pan){
   this.drawLabels();
   if(this.debug==true){
     console.log('labels drawn');
+  }
+  //draw the legend
+  this.drawLegend();
+  if(this.debug==true){
+    console.log('legend drawn');
   }
   //create the map event listeners
   this.createEventListeners(element);

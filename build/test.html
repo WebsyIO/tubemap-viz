@@ -15,7 +15,17 @@
         stationThickness: 10,
         lineWidth: 8,
         lineSpacing: 8,
-        fontSize: 14
+        fontSize: 14,
+        customLegend:[
+          {
+            name: "Test 1",
+            colour: "red"
+          },
+          {
+            name: "Test 2",
+            colour: "blue"
+          }
+        ]
       });
       map.render(map.sampleData, document.getElementById("map"));
     </script>

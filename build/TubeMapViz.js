@@ -250,6 +250,7 @@ var TubeMapViz = (function(){
     this.lineWidth = options.lineWidth || 5;
     this.lineSpacing = options.lineSpacing || 5;
     this.labelLineHeight = options.labelLineHeight || 13;
+    this.labelColour = options.labelColour || "black";
     this.labelWrapThreshold = options.labelWrapThreshold || 4;
     this.fontSize = options.fontSize || 10;
     this.fontFamily = options.fontFamily || "Arial";
@@ -259,6 +260,12 @@ var TubeMapViz = (function(){
     this.stationColour = options.stationColour || "black";
     this.stationThickness = options.stationThickness || this.lineWidth;
     this.stationClicked = options.stationClicked || this.stationClicked;
+    this.customLegend = options.customLegend || null;
+    this.showLegend = options.showLegend || true;
+    this.legendFontSize = options.legendFontSize || this.fontSize;
+    this.legendFontWeight = options.legendFontWeight || this.fontWeight;
+    this.legendFontColour = options.legendFontColour || options.labelColour;
+    this.legendBackgroundColour = options.legendBackgroundColour || "rgba(255,255,255,0.7)";
     this.colours = options.colours || [
       "#61A729",
       "#EE5A35",
@@ -499,6 +506,19 @@ var TubeMapViz = (function(){
           this.panningPaper.canvas.width = width;
           this.panningPaper.canvas.height = height;
           element.appendChild(this.panningPaper.canvas);
+          //legend layer  --for now we're sitting this underneath the panning layer
+          var legendCanvas = document.createElement('canvas');
+          this.legendPaper = {
+            canvas: legendCanvas,
+            pen: legendCanvas.getContext('2d')
+          };
+          this.legendPaper.canvas.style.position = "absolute";
+          this.legendPaper.canvas.style.top = "0px";
+          this.legendPaper.canvas.style.left = "0px";
+          this.legendPaper.canvas.style.zIndex = "45";
+          this.legendPaper.canvas.width = width;
+          this.legendPaper.canvas.height = height;
+          element.appendChild(this.legendPaper.canvas);
 
           this.height = height;
           this.width = width;
@@ -725,6 +745,34 @@ var TubeMapViz = (function(){
           }
         }
         this.lines = lines;
+      }
+
+    },
+    buildLegendData:{
+      value: function(){
+        if(this.customLegend){
+          this.legend = this.customLegend;
+        }
+        else{
+          for(var i=0;i<this.lines.length;i++){
+            var leg = {
+              name: this.lines[i].name
+            };
+            if(this.lines[i].colour){
+              leg.colour = this.lines[i].colour;
+            }
+            else if(Array.isArray(this.colours)){
+              leg.colour = this.colours[i];
+            }
+            else if(this.colours[this.lines[i].name]){
+              leg.colour = this.colours[this.lines[i].name];
+            }
+            else {
+              leg.colour = "black";
+            }
+            this.legend.push(leg);
+          }
+        }
       }
 
     },
@@ -1345,7 +1393,7 @@ var TubeMapViz = (function(){
               this.labelPaper.pen.font = this.fontWeight+" "+ fontSize +"px "+this.fontFamily;
               this.labelPaper.pen.textAlign = "left";
               this.labelPaper.pen.textBaseline = "middle";
-              this.labelPaper.pen.fillStyle = "black";
+              this.labelPaper.pen.fillStyle = this.labelColour;
               if(station.status==0){
                 this.labelPaper.pen.fillStyle = this.inactiveColour;
               }
@@ -1367,6 +1415,56 @@ var TubeMapViz = (function(){
               this.labelPaper.pen.fill();
               this.labelPaper.pen.restore();
           }
+        }
+      }
+
+    },
+    drawLegend:{
+      value: function(){
+        //the legend calculations assume that the line will be 50px wide in the legend
+        //first we calculate the size of the legend and render a semi-transparent background
+        //the legend will have a 20px margin
+        //each item will be separate by 10px
+        this.legendPaper.canvas.width = this.width;
+        var legendWidth = 100, legendHeight = 40, longestLabel = 0;
+        for (var i=0;i<this.legend.length;i++){
+          var labelWidth = this.legendPaper.pen.measureText(this.legend[i].name);
+          longestLabel = Math.max(longestLabel, labelWidth.width);
+          legendHeight+=10;
+        }
+        legendHeight-=10;
+        legendWidth+=longestLabel;
+        this.legendPaper.pen.save();
+        this.legendPaper.pen.beginPath();
+        this.legendPaper.pen.rect(0, 0, legendWidth, legendHeight);
+        this.legendPaper.pen.fillStyle = this.legendBackgroundColour;
+        this.legendPaper.pen.fill();
+        this.legendPaper.pen.closePath();
+        this.legendPaper.pen.restore();
+        var startX = 20, startY = 20;
+        for (var i=0;i<this.legend.length;i++){
+          this.legendPaper.pen.beginPath();
+          this.legendPaper.pen.moveTo(startX, startY);
+          if(this.legend[i].colour){
+            this.legendPaper.pen.strokeStyle = this.legend[i].colour;
+          }
+          else {
+            this.legendPaper.pen.strokeStyle = "black";
+          }
+          this.legendPaper.pen.lineWidth = this.lineWidth;
+          this.legendPaper.pen.lineJoin = 'round';
+          this.legendPaper.pen.lineCap = 'round';
+          this.legendPaper.pen.lineTo((startX+50), startY);
+          this.legendPaper.pen.stroke();
+          this.legendPaper.pen.beginPath();
+          this.legendPaper.pen.moveTo((startX+60), startY);
+          this.legendPaper.pen.font = this.legendFontWeight+" "+ this.legendFontSize +"px "+this.fontFamily;
+          this.legendPaper.pen.textAlign = "left";
+          this.legendPaper.pen.textBaseline = "middle";
+          this.legendPaper.pen.fillStyle = this.legendFontColour;
+          this.legendPaper.pen.fillText(this.legend[i].name, (startX+60), startY);
+          this.legendPaper.pen.fill();
+          startY+=(this.lineWidth+10);
         }
       }
 
@@ -1470,12 +1568,15 @@ var TubeMapViz = (function(){
         if(data && !data.target){   //data.target catches if data is an event
           //reset some of the values
           this.stations = {};
+          this.legend = [];
           this.grid = {};
           //build the station definition
           this.buildStationData(data);
           if(this.debug==true){
             console.log('stations ready');
           }
+          //build the legend
+          this.buildLegendData();
           //evaluate the label requirements
           this.getLabelInfo();
           if(this.debug==true){
@@ -1525,6 +1626,11 @@ var TubeMapViz = (function(){
         this.drawLabels();
         if(this.debug==true){
           console.log('labels drawn');
+        }
+        //draw the legend
+        this.drawLegend();
+        if(this.debug==true){
+          console.log('legend drawn');
         }
         //create the map event listeners
         this.createEventListeners(element);
@@ -1691,7 +1797,7 @@ var TubeMapViz = (function(){
         else {
           this.startPanX = (event.clientX - r.left) - this.posX;
     			this.startPanY = (event.clientY - r.top) - this.posY;
-        }        
+        }
         this.panning = true;
       }
     },
