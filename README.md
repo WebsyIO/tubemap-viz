@@ -43,7 +43,61 @@ The data expected by the map is an array of objects structured like this
 }
 ```
 ####Options
-
+When creating a new instance of TubeMapViz a configuration object can be passed in.
+```javascript
+var options = {
+  fontSize: 14
+}
+var myTubeMap = new TubeMapViz(options);
+```
+Options can also be set after creation
+```javascript
+myTubeMap.fontSize = 14;
+```
+The following is a list of available options
+```javascript
+{
+  "debug": Boolean, //defaults to false;
+  "disableHighlighting": Boolean, //defaults to false;
+  "padding": Number,  //defaults to 30;
+  "stationRadius": Number,  //defaults to 8;
+  "lineWidth": Number,  //defaults to 5;
+  "lineSpacing": Number,  //defaults to 5;
+  "labelLineHeight": Number,  //defaults to 13;
+  "labelColour": String,  //defaults to "black";
+  "labelWrapThreshold": Number, //defaults to 4;
+  "fontSize": Number, //defaults to 10;
+  "fontFamily": String, //defaults to "Arial";
+  "fontWeight": String, //defaults to "Normal";
+  "highlightScale": Number, //defaults to 1.3;
+  "inactiveColour": String, //defaults to "#DDDDDD";
+  "stationColour": String,  //defaults to "black";
+  "stationThickness": Number, //defaults to lineWidth;
+  "stationClicked": Function, //
+  "showLegend": Boolean,  //defaults to true;
+  "customLegend": Array [ //allows you to provide a custom legend
+    {
+      "name": String,
+      "colour": String
+    }
+  ],
+  "legendFontSize": Number, //defaults to fontSize;
+  "legendFontWeight": String, //defaults to fontWeight;
+  "legendFontColour": String, //defaults to labelColour;
+  "legendBackgroundColour": String, //defaults to "rgba(255,255,255,0.7)";
+  "zoomControlBackgroundColour": String,  //defaults to "#888";
+  "allowZoom": Boolean, //defaults to true. if true zoom controls are visible;
+  "zoomToFit": Boolean //defaults to true. only active if allowZoom is also true;
+}
+```
 ####Methods
-
+```javascript
+{
+  stationClicked: function(station){
+    //allows you to add custom behaviour to the stationClicked event
+    //the supplied station object has the following properties
+    
+  }
+}
+```
 ####Rendering Logic
