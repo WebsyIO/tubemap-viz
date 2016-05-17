@@ -1,4 +1,7 @@
 value: function(h, v, item){
+  if(this.debug){
+    console.log("Using cell "+h+":"+v+" as ("+item+")");
+  }
   var cellWidth = this.cellWidth, cellHeight = this.cellHeight;
   var currX = h*cellWidth, currY = v*cellHeight;
   if(!this.grid[h]){
@@ -28,7 +31,7 @@ value: function(h, v, item){
     this.debugPaper.pen.arc(this.grid[h][v].center.x, this.grid[h][v].center.y, this.stationRadius, 0, Math.PI * 2);
     //this.pen.rect(this.grid[h][v].locs.a.x, this.grid[h][v].locs.a.y, this.cellWidth, this.cellHeight);
     this.debugPaper.pen.fill();
-  }  
+  }
   this.boundLeft = Math.min(this.boundLeft, this.grid[h][v].locs.a.x);
   this.boundRight = Math.max(this.boundRight, this.grid[h][v].locs.c.x);
   this.boundTop = Math.min(this.boundTop, this.grid[h][v].locs.a.y);

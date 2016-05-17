@@ -31,8 +31,9 @@ value: function(element){
 
   this.eventPaper.canvas.width = this.width;
   this.eventPaper.pen.translate(this.posX, this.posY);
+  this.eventPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);
   var context = events.getContext();
-
+  context.save(); //save 1
   events.setStage(function(){
     this.clear();
     var stationsHandled = [];
@@ -64,6 +65,41 @@ value: function(element){
           stationsHandled.push(that.lines[l].stations[i].name);
         }
       }
+    }
+    if(that.canZoom){
+      var zoomX, zoomInY, zoomOutY;
+      zoomX = (that.width / that.pixelMultiplier) - (30 / that.pixelMultiplier);
+      zoomInY = (45 / that.pixelMultiplier);
+
+      context.save();
+      this.beginRegion();
+      context.beginPath();
+      // context.strokeStyle = that.legendFontColour;
+      context.lineWidth = 3/that.pixelMultiplier;
+      context.arc((that.width / that.pixelMultiplier) - (15 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (30 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+      context.closePath();
+      if(!that.panning){
+        context.stroke();
+      }
+      if(that.zoomLevel < that.maxZoom){
+        this.addRegionEventListener("mousedown", that.zoomIn.bind(that, null, true));
+        this.addRegionEventListener("touchdown", that.zoomIn.bind(that, null, true));
+      }
+      this.closeRegion();
+
+      this.beginRegion();
+      context.beginPath();
+      context.lineWidth = 3/that.pixelMultiplier;
+      context.arc((that.width / that.pixelMultiplier) - (15 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (60 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+      context.closePath();
+      if(!that.panning){
+        context.stroke();
+      }
+      if(that.zoomLevel > that.minZoom){
+        this.addRegionEventListener("mousedown", that.zoomOut.bind(that, null, true));
+        this.addRegionEventListener("touchdown", that.zoomOut.bind(that, null, true));
+      }
+      this.closeRegion();
     }
   });
 }

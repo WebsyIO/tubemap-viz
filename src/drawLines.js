@@ -13,6 +13,7 @@ value: function(panning){
   }
   this.linePaper.canvas.width = this.width;
   this.linePaper.pen.translate(this.posX, this.posY);
+  this.linePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
   var currX, currY, newX, newY, adjustmentX, adjustmentY, adjustedH, adjustedV, directionOfLine, previousDirection, hLeft, vAbove;
   for (var l in this.lines){
     var stations = this.lines[l].stations;
@@ -83,7 +84,7 @@ value: function(panning){
             adjustmentX = 0;
           }
           else{
-            adjustmentY = 0;            
+            adjustmentY = 0;
           }
         }
         currX = this.stations[stations[i+1].name].gridLoc.center.x;
@@ -121,6 +122,5 @@ value: function(panning){
         previousDirection = directionOfLine;
       }
     }
-
   }
 }

@@ -6,6 +6,7 @@ value: function(){
     var cellWidth = this.cellWidth, cellHeight = this.cellHeight;
     this.debugPaper.canvas.width = this.width;
     this.debugPaper.pen.translate(this.posX, this.posY);
+    this.debugPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
     //draw the grid (debugging only) and calculate the cell structure
     this.debugPaper.pen.beginPath();
     this.debugPaper.pen.strokeStyle = "#E2E2E2";

@@ -12,6 +12,10 @@ value: function(){
   }
   legendHeight-=10;
   legendWidth+=longestLabel;
+  if((this.width / legendWidth) < 5 || (this.height / legendHeight) < 5){
+    var multiplier = (this.width / legendWidth) / 5;
+    this.legendPaper.pen.scale(multiplier,multiplier);
+  }
   this.legendPaper.pen.save();
   this.legendPaper.pen.beginPath();
   this.legendPaper.pen.rect(0, 0, legendWidth, legendHeight);
@@ -29,9 +33,7 @@ value: function(){
     else {
       this.legendPaper.pen.strokeStyle = "black";
     }
-    this.legendPaper.pen.lineWidth = this.lineWidth;
-    this.legendPaper.pen.lineJoin = 'round';
-    this.legendPaper.pen.lineCap = 'round';
+    this.legendPaper.pen.lineWidth = this.lineWidth;    
     this.legendPaper.pen.lineTo((startX+50), startY);
     this.legendPaper.pen.stroke();
     this.legendPaper.pen.beginPath();

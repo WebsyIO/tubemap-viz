@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <title></title>
   </head>
-  <body>
-    <div id="map" class="" style="width: 1260px; height: 640px;">
+  <body style="background-color: #CCC;">
+    <div id="map" class="" style="width: 600px; height: 300px; background-color: white;">
 
     </div>
     <script type="text/javascript" src="./TubeMapViz.js"></script>
@@ -16,16 +16,7 @@
         lineWidth: 8,
         lineSpacing: 8,
         fontSize: 14,
-        customLegend:[
-          {
-            name: "Test 1",
-            colour: "red"
-          },
-          {
-            name: "Test 2",
-            colour: "blue"
-          }
-        ]
+        debug: true
       });
       map.render(map.sampleData, document.getElementById("map"));
     </script>

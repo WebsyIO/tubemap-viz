@@ -73,4 +73,6 @@ value: function(data, element, pan){
   if(this.debug==true){
     console.log('events listening');
   }
+  //create the map zoom controls
+  this.drawZoomControls(element);
 }

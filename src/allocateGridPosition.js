@@ -113,6 +113,9 @@ value: function(x, y, station, lastStation, line, progression, direction){
               reservedCells.push(this.grid[labelX+h][labelY-v]);
               if(v==stationSpace-1 && h==stationSpace-1){
                 //we have space for the label and the station
+                if(this.debug){
+                  console.log("Using cells for "+station.name);
+                }
                 if(lastStation){
                   //connect the dots back to the last station if we're going up
                   var dotCount = (direction==2)?lastStation.label.hCount:station.label.hCount;
@@ -122,6 +125,18 @@ value: function(x, y, station, lastStation, line, progression, direction){
                     }
                   }
                   for(var i=1;i<stationSpace+1;i++){
+                    if(this.debug){
+                      console.log("Blocking cells for "+station.name);
+                    }
+                    this.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
+                    this.useCell(potentialAllocation.h,potentialAllocation.v-i, "blocked");
+                  }
+                }
+                else{
+                  for(var i=1;i<stationSpace+1;i++){
+                    if(this.debug){
+                      console.log("Blocking cells for "+station.name);
+                    }
                     this.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
                     this.useCell(potentialAllocation.h,potentialAllocation.v-i, "blocked");
                   }
@@ -147,7 +162,7 @@ value: function(x, y, station, lastStation, line, progression, direction){
         }
       }
     }
-    else{      
+    else{
       changeDirection.call(this);
     }
   }
