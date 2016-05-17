@@ -2,6 +2,7 @@ value: function(){
   var that = this;
   this.imagePaper.canvas.width = this.width;
   this.imagePaper.pen.translate(this.posX, this.posY);
+  this.imagePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
   for(var l=0; l<this.lines.length;l++){
     for(var i=0; i<this.lines[l].stations.length;i++){
       if(this.stations[this.lines[l].stations[i].name].gridLoc){

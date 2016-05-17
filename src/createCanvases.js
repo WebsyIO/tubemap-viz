@@ -5,7 +5,7 @@ value: function(element, data){
       console.log('adding event listeners to element');
       element.addEventListener('resize', this.render.bind(this), false);
       //element.addEventListener('wheel', this.zoom.bind(this), false);
-      element.addEventListener('mousedown', this.startPan.bind(this), false);
+      element.addEventListener('mousedown', this.startPan.bind(this), true);
       element.addEventListener('touchstart', this.startPan.bind(this), false);
       //element.addEventListener('mouseenter', this.startPan.bind(this), false);
       //element.addEventListener('touchenter', this.startPan.bind(this), false);

@@ -102,5 +102,36 @@ value: [
         status: 1
       }
     ]
+  },
+  {
+    name: "Line5",
+    colour: "#86ae22",
+    status: 1,
+    stations:[
+      {
+        name: "Station M",
+        status: 1
+      },
+      {
+        name: "Station N",
+        status: 1
+      },
+      {
+        name: "Station O",
+        status: 1
+      },
+      {
+        name: "Station P",
+        status: 1
+      },
+      {
+        name: "Station Q",
+        status: 1
+      },
+      {
+        name: "Station R",
+        status: 1
+      }
+    ]
   }
 ]

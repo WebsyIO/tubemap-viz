@@ -2,6 +2,7 @@ value: function(){
   var that = this;
   this.stationPaper.canvas.width = this.width;
   this.stationPaper.pen.translate(this.posX, this.posY);
+  this.stationPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
   var stationsHandled = [];
   for(var l=0; l<this.lines.length;l++){
     for(var i=0; i<this.lines[l].stations.length;i++){
@@ -19,7 +20,7 @@ value: function(){
         var qState = this.lines[l].stations[i].qState;
 
         var radius = Math.ceil(this.stationRadius - (this.lineWidth/2));
-        if(this.lines[l].stations[i].mode=="highlight"){          
+        if(this.lines[l].stations[i].mode=="highlight"){
           radius = radius * this.highlightScale;
         }
         if(this.lines[l].stations[i].custom){

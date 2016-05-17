@@ -264,8 +264,11 @@ var TubeMapViz = (function(){
     this.showLegend = options.showLegend || true;
     this.legendFontSize = options.legendFontSize || this.fontSize;
     this.legendFontWeight = options.legendFontWeight || this.fontWeight;
-    this.legendFontColour = options.legendFontColour || options.labelColour;
+    this.legendFontColour = options.legendFontColour || options.labelColour || "black";
     this.legendBackgroundColour = options.legendBackgroundColour || "rgba(255,255,255,0.7)";
+    this.zoomControlBackgroundColour = options.zoomControlBackgroundColour || "#888";
+    this.allowZoom = options.allowZoom || true;
+    this.zoomToFit = options.zoomToFit || true;
     this.colours = options.colours || [
       "#61A729",
       "#EE5A35",
@@ -295,6 +298,18 @@ var TubeMapViz = (function(){
     height:{
       writable: true
     },
+    mapWidth:{
+      writable: true
+    },
+    mapHeight:{
+      writable: true
+    },
+    mapRatioY:{
+      writable: true
+    },
+    elemRatioY:{
+      writable: true
+    },
     posX:{
       writable: true,
       value: 0
@@ -303,9 +318,35 @@ var TubeMapViz = (function(){
       writable: true,
       value: 0
     },
-    zoomSize:{
+    anchorX:{
       writable: true,
       value: 0
+    },
+    anchorY:{
+      writable: true,
+      value: 0
+    },
+    pixelMultiplier:{
+      writable: true,
+      value: 1
+    },
+    zoomLevel:{
+      writable: true,
+      value: 0
+    },
+    minZoom:{
+      writable: true
+    },
+    maxZoom:{
+      writable: true
+    },
+    canZoom:{
+      writable: true,
+      value: false
+    },
+    zoomSteps:{
+      writable: true,
+      value: []
     },
     boundLeft:{
       writable: true,
@@ -397,7 +438,7 @@ var TubeMapViz = (function(){
             console.log('adding event listeners to element');
             element.addEventListener('resize', this.render.bind(this), false);
             //element.addEventListener('wheel', this.zoom.bind(this), false);
-            element.addEventListener('mousedown', this.startPan.bind(this), false);
+            element.addEventListener('mousedown', this.startPan.bind(this), true);
             element.addEventListener('touchstart', this.startPan.bind(this), false);
             //element.addEventListener('mouseenter', this.startPan.bind(this), false);
             //element.addEventListener('touchenter', this.startPan.bind(this), false);
@@ -649,6 +690,9 @@ var TubeMapViz = (function(){
                     reservedCells.push(this.grid[labelX+h][labelY-v]);
                     if(v==stationSpace-1 && h==stationSpace-1){
                       //we have space for the label and the station
+                      if(this.debug){
+                        console.log("Using cells for "+station.name);
+                      }
                       if(lastStation){
                         //connect the dots back to the last station if we're going up
                         var dotCount = (direction==2)?lastStation.label.hCount:station.label.hCount;
@@ -658,6 +702,18 @@ var TubeMapViz = (function(){
                           }
                         }
                         for(var i=1;i<stationSpace+1;i++){
+                          if(this.debug){
+                            console.log("Blocking cells for "+station.name);
+                          }
+                          this.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
+                          this.useCell(potentialAllocation.h,potentialAllocation.v-i, "blocked");
+                        }
+                      }
+                      else{
+                        for(var i=1;i<stationSpace+1;i++){
+                          if(this.debug){
+                            console.log("Blocking cells for "+station.name);
+                          }
                           this.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
                           this.useCell(potentialAllocation.h,potentialAllocation.v-i, "blocked");
                         }
@@ -683,7 +739,7 @@ var TubeMapViz = (function(){
               }
             }
           }
-          else{      
+          else{
             changeDirection.call(this);
           }
         }
@@ -918,6 +974,9 @@ var TubeMapViz = (function(){
     },
     useCell:{
       value: function(h, v, item){
+        if(this.debug){
+          console.log("Using cell "+h+":"+v+" as ("+item+")");
+        }
         var cellWidth = this.cellWidth, cellHeight = this.cellHeight;
         var currX = h*cellWidth, currY = v*cellHeight;
         if(!this.grid[h]){
@@ -947,7 +1006,7 @@ var TubeMapViz = (function(){
           this.debugPaper.pen.arc(this.grid[h][v].center.x, this.grid[h][v].center.y, this.stationRadius, 0, Math.PI * 2);
           //this.pen.rect(this.grid[h][v].locs.a.x, this.grid[h][v].locs.a.y, this.cellWidth, this.cellHeight);
           this.debugPaper.pen.fill();
-        }  
+        }
         this.boundLeft = Math.min(this.boundLeft, this.grid[h][v].locs.a.x);
         this.boundRight = Math.max(this.boundRight, this.grid[h][v].locs.c.x);
         this.boundTop = Math.min(this.boundTop, this.grid[h][v].locs.a.y);
@@ -1038,6 +1097,9 @@ var TubeMapViz = (function(){
         while(!foundValidY && tries < 1000){  //hopefully we don't span 500 rows (we change direction every 8 rows)
           //lets start by looking down
           for(var i=0;i<8;i++){
+            if(!this.grid[x][this.baseY + (i*iteration)]){
+              this.createNewGridCell(x, this.baseY + (i*iteration));
+            }
             if(this.grid[x][this.baseY + (i*iteration)] && !this.grid[x][this.baseY + (i*iteration)].occupied){
               allocatedY = this.baseY + (i*iteration);
               foundValidY = true;
@@ -1047,6 +1109,9 @@ var TubeMapViz = (function(){
           }
           //then we try looking up
           for(var i=0;i<8;i++){
+            if(!this.grid[x][this.baseY + (i*iteration)]){
+              this.createNewGridCell(x, this.baseY + (i*iteration));
+            }
             if(this.grid[x][this.baseY - (i*iteration)] && !this.grid[x][this.baseY - (i*iteration)].occupied){
               allocatedY = this.baseY - (i*iteration);
               foundValidY = true;
@@ -1093,15 +1158,79 @@ var TubeMapViz = (function(){
     centerMap:{
       value: function(){
         //using the boundary values set the start position of the map
-        var mapWidth = this.boundRight -  this.boundLeft;
-        var mapHeight = this.boundBottom - this.boundTop;
-        if(mapWidth < this.width){
-          this.posX = ((this.width - mapWidth) / 2);
+        this.mapWidth = this.boundRight -  this.boundLeft + 60;   //the +60 gives us a margin
+        this.mapHeight = this.boundBottom - this.boundTop;
+        this.mapRatioY = this.mapWidth / this.mapHeight;
+        this.elemRatioY = this.width / this.height;
+        var xOverhang=0, yOverhang=0;
+        //check if the map is wider than the element
+        this.posX = ((this.width - this.mapWidth) / 2);
+        this.posY = ((this.height - this.mapHeight) / 2) - this.boundTop;
+        if(this.mapWidth > this.width){
+          xOverhang = this.mapWidth - this.width;
+          this.posX = 30;
         }
-        else{
-          this.posX = (0 - this.boundLeft) + 30;
+        //check if the map is taller than the element
+        if(this.mapHeight > this.height){
+          yOverhang = this.mapHeight - this.height;
+          this.posY = Math.abs(this.boundTop)+((this.height - this.mapHeight)/2);
         }
-        this.posY = ((this.height - mapHeight) / 2) - this.boundTop;
+        //if the zoomToFit option is set to true we need to resize the map so it fits inside the element
+        //this means calculating a resize ratio for all of the draw functions
+        if(this.allowZoom===true){
+          var growX=0, growY=0;
+          if(xOverhang > 0){
+            growX = this.mapWidth / this.width;
+          }
+          if(yOverhang > 0){
+            growY = this.mapHeight / this.height;
+          }
+          if(growY > growX){
+            this.pixelMultiplier = 1 / growY;
+          }
+          else{
+            this.pixelMultiplier = 1 / growX;
+          }
+        }
+        if(this.pixelMultiplier < 1){
+          this.canZoom = true;
+          this.zoomLevel = 0;
+          this.pixelMultiplier = decimalAdjust('floor', this.pixelMultiplier, -1);
+          this.minZoom = this.pixelMultiplier;
+          var minZoomRounded = decimalAdjust('floor', this.minZoom, -1);
+          this.zoomSteps.push(this.minZoom);
+          for (var i=(minZoomRounded*10)+1;i<11;i++){
+            this.zoomSteps.push((i/10));
+          }
+          this.maxZoom = this.zoomSteps.length-1;
+          if(this.zoomToFit===true){
+            this.posX = Math.abs(this.boundLeft*this.pixelMultiplier)+(((this.width - (this.mapWidth*this.pixelMultiplier)))/2);
+            this.posY = Math.abs(this.boundTop*this.pixelMultiplier)+(((this.height - (this.mapHeight*this.pixelMultiplier)))/2);
+          }
+          else{
+            this.pixelMultiplier = this.zoomSteps[this.zoomSteps.length-1];
+            this.zoomLevel = this.zoomSteps.length-1;
+          }
+
+        }
+        function decimalAdjust(type, value, exp) {
+          // If the exp is undefined or zero...
+          if (typeof exp === 'undefined' || +exp === 0) {
+            return Math[type](value);
+          }
+          value = +value;
+          exp = +exp;
+          // If the value is not a number or the exp is not an integer...
+          if (isNaN(value) || !(typeof exp === 'number' && exp % 1 === 0)) {
+            return NaN;
+          }
+          // Shift
+          value = value.toString().split('e');
+          value = Math[type](+(value[0] + 'e' + (value[1] ? (+value[1] - exp) : -exp)));
+          // Shift back
+          value = value.toString().split('e');
+          return +(value[0] + 'e' + (value[1] ? (+value[1] + exp) : exp));
+        }
       }
 
     },
@@ -1136,6 +1265,7 @@ var TubeMapViz = (function(){
           var cellWidth = this.cellWidth, cellHeight = this.cellHeight;
           this.debugPaper.canvas.width = this.width;
           this.debugPaper.pen.translate(this.posX, this.posY);
+          this.debugPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
           //draw the grid (debugging only) and calculate the cell structure
           this.debugPaper.pen.beginPath();
           this.debugPaper.pen.strokeStyle = "#E2E2E2";
@@ -1165,6 +1295,7 @@ var TubeMapViz = (function(){
         }
         this.linePaper.canvas.width = this.width;
         this.linePaper.pen.translate(this.posX, this.posY);
+        this.linePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
         var currX, currY, newX, newY, adjustmentX, adjustmentY, adjustedH, adjustedV, directionOfLine, previousDirection, hLeft, vAbove;
         for (var l in this.lines){
           var stations = this.lines[l].stations;
@@ -1235,7 +1366,7 @@ var TubeMapViz = (function(){
                   adjustmentX = 0;
                 }
                 else{
-                  adjustmentY = 0;            
+                  adjustmentY = 0;
                 }
               }
               currX = this.stations[stations[i+1].name].gridLoc.center.x;
@@ -1273,7 +1404,6 @@ var TubeMapViz = (function(){
               previousDirection = directionOfLine;
             }
           }
-
         }
       }
 
@@ -1283,6 +1413,7 @@ var TubeMapViz = (function(){
         var that = this;
         this.stationPaper.canvas.width = this.width;
         this.stationPaper.pen.translate(this.posX, this.posY);
+        this.stationPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
         var stationsHandled = [];
         for(var l=0; l<this.lines.length;l++){
           for(var i=0; i<this.lines[l].stations.length;i++){
@@ -1300,7 +1431,7 @@ var TubeMapViz = (function(){
               var qState = this.lines[l].stations[i].qState;
 
               var radius = Math.ceil(this.stationRadius - (this.lineWidth/2));
-              if(this.lines[l].stations[i].mode=="highlight"){          
+              if(this.lines[l].stations[i].mode=="highlight"){
                 radius = radius * this.highlightScale;
               }
               if(this.lines[l].stations[i].custom){
@@ -1331,6 +1462,7 @@ var TubeMapViz = (function(){
         var that = this;
         this.imagePaper.canvas.width = this.width;
         this.imagePaper.pen.translate(this.posX, this.posY);
+        this.imagePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
         for(var l=0; l<this.lines.length;l++){
           for(var i=0; i<this.lines[l].stations.length;i++){
             if(this.stations[this.lines[l].stations[i].name].gridLoc){
@@ -1374,6 +1506,7 @@ var TubeMapViz = (function(){
         this.labelPaper.canvas.width = this.width;
         //this.labelPaper.pen.setTransform(this.PIXEL_RATIO, 0, 0, this.PIXEL_RATIO, 0, 0);
         this.labelPaper.pen.translate(this.posX, this.posY);
+        this.labelPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
         for(var s in this.stations){
           if(this.stations[s].labelLoc){
               var station = this.stations[s];
@@ -1434,6 +1567,10 @@ var TubeMapViz = (function(){
         }
         legendHeight-=10;
         legendWidth+=longestLabel;
+        if((this.width / legendWidth) < 5 || (this.height / legendHeight) < 5){
+          var multiplier = (this.width / legendWidth) / 5;
+          this.legendPaper.pen.scale(multiplier,multiplier);
+        }
         this.legendPaper.pen.save();
         this.legendPaper.pen.beginPath();
         this.legendPaper.pen.rect(0, 0, legendWidth, legendHeight);
@@ -1451,9 +1588,7 @@ var TubeMapViz = (function(){
           else {
             this.legendPaper.pen.strokeStyle = "black";
           }
-          this.legendPaper.pen.lineWidth = this.lineWidth;
-          this.legendPaper.pen.lineJoin = 'round';
-          this.legendPaper.pen.lineCap = 'round';
+          this.legendPaper.pen.lineWidth = this.lineWidth;    
           this.legendPaper.pen.lineTo((startX+50), startY);
           this.legendPaper.pen.stroke();
           this.legendPaper.pen.beginPath();
@@ -1465,6 +1600,84 @@ var TubeMapViz = (function(){
           this.legendPaper.pen.fillText(this.legend[i].name, (startX+60), startY);
           this.legendPaper.pen.fill();
           startY+=(this.lineWidth+10);
+        }
+      }
+
+    },
+    drawZoomControls:{
+      value: function(element){
+        //interaction layer  
+        if(!element){
+          if(this.zoomPaper){
+            element = this.zoomPaper.canvas.parentElement;
+          }
+          else{
+            return;
+          }
+        }
+        //first remove the existing canvas
+        if(this.zoomPaper && this.zoomPaper.canvas){
+          this.zoomPaper.canvas.remove();
+        }
+        //then add a new one
+        var zoomCanvas = document.createElement('canvas');
+        this.zoomPaper = {
+          canvas: zoomCanvas,
+          pen: zoomCanvas.getContext('2d')
+        };
+        this.zoomPaper.canvas.style.position = "absolute";
+        this.zoomPaper.canvas.style.top = "0px";
+        this.zoomPaper.canvas.style.left = "0px";
+        this.zoomPaper.canvas.style.zIndex = "55";
+        this.zoomPaper.canvas.width = this.width;
+        this.zoomPaper.canvas.height = this.height;
+        element.appendChild(this.zoomPaper.canvas);
+        //this.zoomPaper.pen.restore();
+        // this.zoomPaper.pen.translate(this.posX, this.posY);
+        // this.zoomPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);
+        //draw the zoom controls
+        //draw the zoom in control
+        if(this.canZoom){
+          var zoomX, zoomInY, zoomOutY;
+          zoomX = (this.width / this.pixelMultiplier) - (30 / this.pixelMultiplier);
+          zoomInY = (45 / this.pixelMultiplier);
+          this.zoomPaper.pen.beginPath();
+          if(this.zoomLevel < this.maxZoom){
+            this.zoomPaper.pen.fillStyle = this.zoomControlBackgroundColour;
+          }
+          else{
+            this.zoomPaper.pen.fillStyle = this.inactiveColour;
+          }
+          this.zoomPaper.pen.lineWidth = 3/this.pixelMultiplier;
+          // this.zoomPaper.pen.arc((this.width / this.pixelMultiplier) - (15 / this.pixelMultiplier) - ((this.posX) / this.pixelMultiplier), (30 / this.pixelMultiplier) - ((this.posY) / this.pixelMultiplier), (12/this.pixelMultiplier), 0, Math.PI * 2);
+          this.zoomPaper.pen.arc(this.width - 15, 30, 12, 0, Math.PI * 2);
+          this.zoomPaper.pen.closePath();
+          this.zoomPaper.pen.fill();
+          this.zoomPaper.pen.beginPath();
+          if(this.zoomLevel > this.minZoom){
+            this.zoomPaper.pen.fillStyle = this.zoomControlBackgroundColour;
+          }
+          else{
+            this.zoomPaper.pen.fillStyle = this.inactiveColour;
+          }
+          this.zoomPaper.pen.lineWidth = 3/this.pixelMultiplier;
+          this.zoomPaper.pen.arc(this.width - 15, 60, 12, 0, Math.PI * 2);
+          this.zoomPaper.pen.closePath();
+          this.zoomPaper.pen.fill();
+
+          this.zoomPaper.pen.beginPath();
+          this.zoomPaper.pen.fillStyle = "white";
+          this.zoomPaper.pen.font = "16px "+this.fontFamily
+          this.zoomPaper.pen.textAlign = "center";
+          this.zoomPaper.pen.textBaseline = "middle";
+          this.zoomPaper.pen.fillText("+", this.width - 15, 31);
+          // this.zoomPaper.pen.closePath();
+          // this.zoomPaper.pen.fill();
+          // this.zoomPaper.pen.beginPath();
+          this.zoomPaper.pen.fillText("-", this.width - 15, 60);
+          this.zoomPaper.pen.closePath();
+          this.zoomPaper.pen.fill();
+
         }
       }
 
@@ -1503,8 +1716,9 @@ var TubeMapViz = (function(){
 
         this.eventPaper.canvas.width = this.width;
         this.eventPaper.pen.translate(this.posX, this.posY);
+        this.eventPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);
         var context = events.getContext();
-
+        context.save(); //save 1
         events.setStage(function(){
           this.clear();
           var stationsHandled = [];
@@ -1536,6 +1750,41 @@ var TubeMapViz = (function(){
                 stationsHandled.push(that.lines[l].stations[i].name);
               }
             }
+          }
+          if(that.canZoom){
+            var zoomX, zoomInY, zoomOutY;
+            zoomX = (that.width / that.pixelMultiplier) - (30 / that.pixelMultiplier);
+            zoomInY = (45 / that.pixelMultiplier);
+
+            context.save();
+            this.beginRegion();
+            context.beginPath();
+            // context.strokeStyle = that.legendFontColour;
+            context.lineWidth = 3/that.pixelMultiplier;
+            context.arc((that.width / that.pixelMultiplier) - (15 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (30 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+            context.closePath();
+            if(!that.panning){
+              context.stroke();
+            }
+            if(that.zoomLevel < that.maxZoom){
+              this.addRegionEventListener("mousedown", that.zoomIn.bind(that, null, true));
+              this.addRegionEventListener("touchdown", that.zoomIn.bind(that, null, true));
+            }
+            this.closeRegion();
+
+            this.beginRegion();
+            context.beginPath();
+            context.lineWidth = 3/that.pixelMultiplier;
+            context.arc((that.width / that.pixelMultiplier) - (15 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (60 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+            context.closePath();
+            if(!that.panning){
+              context.stroke();
+            }
+            if(that.zoomLevel > that.minZoom){
+              this.addRegionEventListener("mousedown", that.zoomOut.bind(that, null, true));
+              this.addRegionEventListener("touchdown", that.zoomOut.bind(that, null, true));
+            }
+            this.closeRegion();
           }
         });
       }
@@ -1637,6 +1886,8 @@ var TubeMapViz = (function(){
         if(this.debug==true){
           console.log('events listening');
         }
+        //create the map zoom controls
+        this.drawZoomControls(element);
       }
 
     },
@@ -1745,6 +1996,37 @@ var TubeMapViz = (function(){
               status: 1
             }
           ]
+        },
+        {
+          name: "Line5",
+          colour: "#86ae22",
+          status: 1,
+          stations:[
+            {
+              name: "Station M",
+              status: 1
+            },
+            {
+              name: "Station N",
+              status: 1
+            },
+            {
+              name: "Station O",
+              status: 1
+            },
+            {
+              name: "Station P",
+              status: 1
+            },
+            {
+              name: "Station Q",
+              status: 1
+            },
+            {
+              name: "Station R",
+              status: 1
+            }
+          ]
         }
       ]
 
@@ -1766,13 +2048,13 @@ var TubeMapViz = (function(){
     stationClicked:{
       writable: true,
       value: function(station){
-
+        alert('you clicked station "'+station.name+'"');
       }
     },
     highlightStation:{
       value: function(station){
         if(!this.disableHighlighting){
-          station.mode = "highlight"; //status 3 is a hover
+          station.mode = "highlight";
           this.drawStations();
           this.drawLabels();
         }
@@ -1790,6 +2072,8 @@ var TubeMapViz = (function(){
     startPan: {
       value: function(event){
         var r = this.eventPaper.canvas.getBoundingClientRect();
+        this.anchorX = this.posX;
+        this.anchorY = this.posY;
         if(event.type=="touchstart"){
           this.startPanX = (event.touches[0].clientX - r.left) - this.posX;
     			this.startPanY = (event.touches[0].clientY - r.top) - this.posY;
@@ -1804,6 +2088,10 @@ var TubeMapViz = (function(){
     endPan: {
       value: function(event){
         this.panning = false;
+        this.startPanX = 0;
+        this.startPanY = 0;
+        this.anchorX = 0;
+        this.anchorY = 0;
         this.createEventListeners();
       }
     },
@@ -1828,6 +2116,7 @@ var TubeMapViz = (function(){
           this.drawStations();
           this.drawLabels();
           this.drawImages();
+          this.drawZoomControls();
         }
       }
     },
@@ -1837,13 +2126,67 @@ var TubeMapViz = (function(){
       }
 
     },
-    zoom:{
+    zoomIn:{
+      value: function(){
+        this.animateZoom(1, 10, 1, function(){
+          this.zoomLevel++;
+          this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
+          console.log(this.pixelMultiplier);
+          this.drawGrid();
+          this.drawLines(true);
+          this.drawStations();
+          this.drawLabels();
+          this.drawImages();
+          this.drawZoomControls();
+          this.createEventListeners();
+        });
+      }
+    },
+    zoomOut:{
       value: function(event){
-        event.preventDefault();
-        event.deltaY > 0 ? this.zoomSize--:this.zoomSize++;
-        //this.drawStations();
+        this.animateZoom(1, 10, -1, function(){
+          this.zoomLevel--;
+          this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
+          this.drawGrid();
+          this.drawLines(true);
+          this.drawStations();
+          this.drawLabels();
+          this.drawImages();
+          this.drawZoomControls();
+          this.createEventListeners();
+        });
+      }
+    },
+    animateZoom: {
+      value: function(curr, max, step, callbackFn){
+        var that = this;
+        this.pixelMultiplier += step/max/10;
+        requestAnimFrame(function(){
+          that.drawGrid();
+          that.drawLines(true);
+          that.drawStations();
+          that.drawLabels();
+          that.drawImages();
+          that.drawZoomControls();
+          that.createEventListeners();
+          curr++;
+          if(curr<max){
+            that.animateZoom(curr, max, step, callbackFn);
+          }
+          else {
+            callbackFn.call(that);
+          }
+        });
       }
     }
   });
   return TubeMapViz;
 }());
+if(!window.requestAnimFrame){
+  window.requestAnimFrame = (function(callback) {
+    return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame ||
+    function(callback) {
+      window.setTimeout(callback, 1000 / 60);
+    };
+  })();
+}

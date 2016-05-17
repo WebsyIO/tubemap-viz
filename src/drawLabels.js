@@ -2,6 +2,7 @@ value: function(){
   this.labelPaper.canvas.width = this.width;
   //this.labelPaper.pen.setTransform(this.PIXEL_RATIO, 0, 0, this.PIXEL_RATIO, 0, 0);
   this.labelPaper.pen.translate(this.posX, this.posY);
+  this.labelPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
   for(var s in this.stations){
     if(this.stations[s].labelLoc){
         var station = this.stations[s];
