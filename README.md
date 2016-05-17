@@ -92,12 +92,14 @@ The following is a list of available options
 ```
 ####Methods
 ```javascript
-{
-  stationClicked: function(station){
-    //allows you to add custom behaviour to the stationClicked event
-    //the supplied station object has the following properties
-    
-  }
+stationClicked: function(station){
+  //allows you to add custom behaviour to the stationClicked event
+  //the supplied station object has the following properties
+  {
+    "name": String, 
+    "status": Number, 
+    "mode": String
+  } 
 }
 ```
 ####Rendering Logic
