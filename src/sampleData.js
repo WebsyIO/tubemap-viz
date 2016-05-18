@@ -77,11 +77,7 @@ value: [
       },
       {
         name: "Station L",
-        status: 1,
-        custom:{
-          image: "qlik.png",
-          imageSize: 60
-        }
+        status: 1
       }
     ]
   },
