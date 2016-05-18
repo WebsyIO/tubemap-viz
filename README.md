@@ -2,7 +2,7 @@
 ###An HTML5 Canvas based visualisation that lets you represent data in the style of a Tube/Metro map.
 The map is a work in progress but feel free to use, abuse and contribute. Enjoy.
 
-Example:
+#####Example:
 ![alt text](Example.png "Example Map")
 ####Setup
 Load the TubeMapViz library into your webpage
