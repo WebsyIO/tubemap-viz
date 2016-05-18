@@ -20,7 +20,7 @@ value: function(){
   //if the zoomToFit option is set to true we need to resize the map so it fits inside the element
   //this means calculating a resize ratio for all of the draw functions
   if(this.allowZoom===true){
-    var growX=0, growY=0;
+    var growX=1, growY=1;
     if(xOverhang > 0){
       growX = this.mapWidth / this.width;
     }

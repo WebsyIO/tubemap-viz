@@ -1178,7 +1178,7 @@ var TubeMapViz = (function(){
         //if the zoomToFit option is set to true we need to resize the map so it fits inside the element
         //this means calculating a resize ratio for all of the draw functions
         if(this.allowZoom===true){
-          var growX=0, growY=0;
+          var growX=1, growY=1;
           if(xOverhang > 0){
             growX = this.mapWidth / this.width;
           }
@@ -1295,7 +1295,7 @@ var TubeMapViz = (function(){
         }
         this.linePaper.canvas.width = this.width;
         this.linePaper.pen.translate(this.posX, this.posY);
-        this.linePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
+        this.linePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);
         var currX, currY, newX, newY, adjustmentX, adjustmentY, adjustedH, adjustedV, directionOfLine, previousDirection, hLeft, vAbove;
         for (var l in this.lines){
           var stations = this.lines[l].stations;
@@ -1340,9 +1340,13 @@ var TubeMapViz = (function(){
                   else{
                     adjustmentX = (this.lineSpacing * vLeft) + (this.lineSpacing * this.stations[stations[i].name].vRightLinesDrawn * vLeft);
                   }
-                  if(i==0){
+                  //if(i==0){
                     this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
-                  }
+                  //}
+                }
+                else{
+                  adjustmentX = 0;
+                  this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
                 }
               }
               else if (this.stations[stations[i].name].gridLoc.center.y == this.stations[stations[i+1].name].gridLoc.center.y) {
@@ -1356,9 +1360,13 @@ var TubeMapViz = (function(){
                   else{
                     adjustmentY = (this.lineSpacing * hBelow) + (this.lineSpacing * this.stations[stations[i].name].hAboveLinesDrawn * hBelow);
                   }
-                  if(i==0){
+                  //if(i==0){
                     this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
-                  }
+                  //}
+                }
+                else{
+                  adjustmentY = 0;
+                  this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
                 }
               }
               if(directionOfLine != previousDirection){
@@ -1402,6 +1410,34 @@ var TubeMapViz = (function(){
                 }
               }
               previousDirection = directionOfLine;
+            }
+            else{
+              if(this.stations[stations[i].name].lines.length <=2){
+                if(directionOfLine=="h"){
+                  if(hBelow==1 && this.stations[stations[i].name].hLinesDrawn > 0){
+                    this.stations[stations[i].name].hBelowLinesDrawn++;
+                  }
+                  else if(this.stations[stations[i].name].hLinesDrawn > 0){
+                    this.stations[stations[i].name].hAboveLinesDrawn++;
+                  }
+                  this.stations[stations[i].name].hLinesDrawn++;
+                  if(previousDirection=="v"){
+                    this.stations[stations[i].name].vLinesDrawn++;
+                  }
+                }
+                else{
+                  if(vLeft==-1 && this.stations[stations[i].name].vLinesDrawn > 0){
+                    this.stations[stations[i].name].vLeftLinesDrawn++;
+                  }
+                  else if(this.stations[stations[i].name].vLinesDrawn > 0){
+                    this.stations[stations[i].name].vRightLinesDrawn++;
+                  }
+                  this.stations[stations[i].name].vLinesDrawn++;
+                  if(previousDirection=="h"){
+                    this.stations[stations[i].name].hLinesDrawn++;
+                  }
+                }
+              }
             }
           }
         }
@@ -1462,41 +1498,43 @@ var TubeMapViz = (function(){
         var that = this;
         this.imagePaper.canvas.width = this.width;
         this.imagePaper.pen.translate(this.posX, this.posY);
-        this.imagePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
+        this.imagePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);
         for(var l=0; l<this.lines.length;l++){
           for(var i=0; i<this.lines[l].stations.length;i++){
             if(this.stations[this.lines[l].stations[i].name].gridLoc){
-              var station = this.stations[this.lines[l].stations[i].name]
+              var station = this.stations[this.lines[l].stations[i].name];
               var x = station.gridLoc.center.x;
               var y = station.gridLoc.center.y;
-              var radius = Math.ceil(this.stationRadius - (this.lineWidth/2));
+              var radius = this.stationRadius;
               this.imagePaper.pen.beginPath();
               if(this.lines[l].stations[i].custom){
                 var custom = this.lines[l].stations[i].custom;
                 if(custom.image){
                   if(custom.scale){
-                    radius = radius * custom.scale;
+                    radius = (radius * custom.scale);
                   }
                   if(custom.imageSize){
                     radius = (custom.imageSize / 2);
                   }
-                  renderImage(x, y, custom.image, radius)
+                  renderImage(x, y, custom.image, radius, station)
                 }
               }
             }
           }
         }
 
-        function renderImage(x, y, url, size){
-          var im = new Image();
-          im.onload = function(){
-            var width = im.width;
-            var height = im.height;
-            var newWidth = (size*2);
-            var newHeight = (size*2);
-            that.imagePaper.pen.drawImage(im, (x - (newWidth/2)), (y-(newHeight/2)) , newWidth, newHeight);
-          };
-          im.src = url;
+        function renderImage(x, y, url, size, station){
+          if(!station.customImage){
+            var im = new Image();
+            im.onload = function(){
+              that.imagePaper.pen.drawImage(im, (x - size), (y-size) , size*2, size*2);
+              station.customImage = im;
+            };
+            im.src = url;
+          }
+          else {
+            that.imagePaper.pen.drawImage(station.customImage, (x - size), (y-size) , size*2, size*2);
+          }
         }
       }
 
@@ -1896,11 +1934,14 @@ var TubeMapViz = (function(){
         {
           name: "Line1",
           colour: "#ff7373",
-          status: 1,
           stations: [
             {
               name: "Station A",
-              status: 1
+              status: 1,
+              custom:{
+                fill: "#ff7373",
+                scale: 2
+              }
             },
             {
               name: "Station B",
@@ -1919,7 +1960,6 @@ var TubeMapViz = (function(){
         {
           name: "Line2",
           colour: "#ffd546",
-          status: 1,
           stations: [
             {
               name: "Station D",
@@ -1942,7 +1982,6 @@ var TubeMapViz = (function(){
         {
           name: "Line3",
           colour: "#d47dbe",
-          status: 1,
           stations:[
             {
               name: "Station C",
@@ -1970,14 +2009,17 @@ var TubeMapViz = (function(){
             },
             {
               name: "Station L",
-              status: 1
+              status: 1,
+              custom:{
+                image: "qlik.png",
+                imageSize: 60
+              }
             }
           ]
         },
         {
           name: "Line4",
           colour: "#68b5de",
-          status: 1,
           stations: [
             {
               name: "Station D",
@@ -1989,22 +2031,25 @@ var TubeMapViz = (function(){
             },
             {
               name: "Station H",
-              status: 1
+              status: 0
             },
             {
               name: "Station I",
-              status: 1
+              status: 0
             }
           ]
         },
         {
           name: "Line5",
           colour: "#86ae22",
-          status: 1,
           stations:[
             {
               name: "Station M",
-              status: 1
+              status: 1,
+              custom:{
+                fill: "#86ae22",
+                scale: 2
+              }
             },
             {
               name: "Station N",

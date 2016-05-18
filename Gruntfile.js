@@ -2,7 +2,7 @@ module.exports = function(grunt) {
   grunt.initConfig({
     includes: {
       files:{
-        src: ['TubeMapViz.js'],
+        src: ['tube-map-viz.js'],
         dest: 'build',
         cwd: 'src'
       }
@@ -10,7 +10,7 @@ module.exports = function(grunt) {
     watch: {
       scripts: {
         files: ['src/**/*.js'], // which files to watch
-        tasks: ['includes'],
+        tasks: ['includes','uglify'],
         options: {
           nospawn: true,
           livereload: true
@@ -24,7 +24,7 @@ module.exports = function(grunt) {
       },
       build: {
         files: {
-          'build/TubeMapViz.min.js': ['build/TubeMapViz.js']
+          'build/tube-map-viz.min.js': ['build/tube-map-viz.js']
         }
       }
     }
