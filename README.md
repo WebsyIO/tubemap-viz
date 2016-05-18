@@ -27,11 +27,10 @@ The data expected by the map is an array of objects structured like this
 {
   "name": String, (required)
   "colour": String,
-  "status": Number,  //1 - default || 0 - draws an inactive line using the specified 'inactiveColour'
   "stations": Array (required) [
     {
       "name": String (required),
-      "status": Number,
+      "status": Number, //1 - default || 0 - draws an inactive line either side of the station using the specified 'inactiveColour'
       "custom": {
         "fill": String, //overrides the station fill colour
         "stroke": String, //overrides the station stroke colour
