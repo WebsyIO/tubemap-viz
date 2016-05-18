@@ -2,11 +2,14 @@ value: [
   {
     name: "Line1",
     colour: "#ff7373",
-    status: 1,
     stations: [
       {
         name: "Station A",
-        status: 1
+        status: 1,
+        custom:{
+          fill: "#ff7373",
+          scale: 2
+        }
       },
       {
         name: "Station B",
@@ -25,7 +28,6 @@ value: [
   {
     name: "Line2",
     colour: "#ffd546",
-    status: 1,
     stations: [
       {
         name: "Station D",
@@ -48,7 +50,6 @@ value: [
   {
     name: "Line3",
     colour: "#d47dbe",
-    status: 1,
     stations:[
       {
         name: "Station C",
@@ -83,7 +84,6 @@ value: [
   {
     name: "Line4",
     colour: "#68b5de",
-    status: 1,
     stations: [
       {
         name: "Station D",
@@ -95,22 +95,25 @@ value: [
       },
       {
         name: "Station H",
-        status: 1
+        status: 0
       },
       {
         name: "Station I",
-        status: 1
+        status: 0
       }
     ]
   },
   {
     name: "Line5",
     colour: "#86ae22",
-    status: 1,
     stations:[
       {
         name: "Station M",
-        status: 1
+        status: 1,
+        custom:{
+          fill: "#86ae22",
+          scale: 2
+        }
       },
       {
         name: "Station N",

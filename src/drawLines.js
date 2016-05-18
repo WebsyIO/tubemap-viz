@@ -13,7 +13,7 @@ value: function(panning){
   }
   this.linePaper.canvas.width = this.width;
   this.linePaper.pen.translate(this.posX, this.posY);
-  this.linePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
+  this.linePaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);
   var currX, currY, newX, newY, adjustmentX, adjustmentY, adjustedH, adjustedV, directionOfLine, previousDirection, hLeft, vAbove;
   for (var l in this.lines){
     var stations = this.lines[l].stations;
@@ -58,9 +58,13 @@ value: function(panning){
             else{
               adjustmentX = (this.lineSpacing * vLeft) + (this.lineSpacing * this.stations[stations[i].name].vRightLinesDrawn * vLeft);
             }
-            if(i==0){
+            //if(i==0){
               this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
-            }
+            //}
+          }
+          else{
+            adjustmentX = 0;
+            this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
           }
         }
         else if (this.stations[stations[i].name].gridLoc.center.y == this.stations[stations[i+1].name].gridLoc.center.y) {
@@ -74,9 +78,13 @@ value: function(panning){
             else{
               adjustmentY = (this.lineSpacing * hBelow) + (this.lineSpacing * this.stations[stations[i].name].hAboveLinesDrawn * hBelow);
             }
-            if(i==0){
+            //if(i==0){
               this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
-            }
+            //}
+          }
+          else{
+            adjustmentY = 0;
+            this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
           }
         }
         if(directionOfLine != previousDirection){
@@ -120,6 +128,34 @@ value: function(panning){
           }
         }
         previousDirection = directionOfLine;
+      }
+      else{
+        if(this.stations[stations[i].name].lines.length <=2){
+          if(directionOfLine=="h"){
+            if(hBelow==1 && this.stations[stations[i].name].hLinesDrawn > 0){
+              this.stations[stations[i].name].hBelowLinesDrawn++;
+            }
+            else if(this.stations[stations[i].name].hLinesDrawn > 0){
+              this.stations[stations[i].name].hAboveLinesDrawn++;
+            }
+            this.stations[stations[i].name].hLinesDrawn++;
+            if(previousDirection=="v"){
+              this.stations[stations[i].name].vLinesDrawn++;
+            }
+          }
+          else{
+            if(vLeft==-1 && this.stations[stations[i].name].vLinesDrawn > 0){
+              this.stations[stations[i].name].vLeftLinesDrawn++;
+            }
+            else if(this.stations[stations[i].name].vLinesDrawn > 0){
+              this.stations[stations[i].name].vRightLinesDrawn++;
+            }
+            this.stations[stations[i].name].vLinesDrawn++;
+            if(previousDirection=="h"){
+              this.stations[stations[i].name].hLinesDrawn++;
+            }
+          }
+        }
       }
     }
   }
