@@ -58,14 +58,14 @@ The following is a list of available options
 ```javascript
 {
   "debug": Boolean, //defaults to false;
-  "disableHighlighting": Boolean, //defaults to false;
+  "disableHighlighting": Boolean, //defaults to false. if true stations will not 'popout' on mouseover;
   "padding": Number,  //defaults to 30;
   "stationRadius": Number,  //defaults to 8;
   "lineWidth": Number,  //defaults to 5;
   "lineSpacing": Number,  //defaults to 5;
   "labelLineHeight": Number,  //defaults to 13;
   "labelColour": String,  //defaults to "black";
-  "labelWrapThreshold": Number, //defaults to 4;
+  "labelWrapThreshold": Number, //defaults to 4 cells. cell size is equal to 2 x stationRadius;
   "fontSize": Number, //defaults to 10;
   "fontFamily": String, //defaults to "Arial";
   "fontWeight": String, //defaults to "Normal";
