@@ -1,5 +1,6 @@
 # tubemap-viz
 ###An HTML5 Canvas based visualisation that lets you represent data in the style of a Tube/Metro map.
+The map is a work in progress but feel free to use, abuse and contribute. Enjoy.
 
 ####Setup
 Load the TubeMapViz library into your webpage
@@ -103,3 +104,8 @@ stationClicked: function(station){
 }
 ```
 ####Rendering Logic
+*Lines are drawn in the same order they are provided
+*Lines will always draw from left to right
+*Where a line cannot continue in a given horizontal direction it will look for an alternative vertical route, starting in a downward direction
+*Lines are only drawn horizontally and vertically
+*Multiple lines that share 2 or more consecutive stations will be drawn parallel
