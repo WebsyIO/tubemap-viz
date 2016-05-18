@@ -36,7 +36,7 @@ The data expected by the map is an array of objects structured like this
         "stroke": String, //overrides the station stroke colour
         "scale": Number, //scales the station by the specified scale
         "image": String, (url) //allows an image to be used to represent the station
-        "imageSize": Number //specifies the radius of the image used
+        "imageSize": Number //specifies the diameter of the image used
       }
     }
   ]
