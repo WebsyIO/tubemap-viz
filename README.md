@@ -33,12 +33,14 @@ The data expected by the map is an array of objects structured like this
     {
       "name": String (required),
       "status": Number, //1 - default || 0 - draws an inactive line either side of the station using the specified 'inactiveColour'
+      "distanceToNext": Number, //if set is used to determine the distance between this and the next station
       "custom": {
         "fill": String, //overrides the station fill colour
         "stroke": String, //overrides the station stroke colour
         "scale": Number, //scales the station by the specified scale
         "image": String, (url) //allows an image to be used to represent the station
-        "imageSize": Number //specifies the diameter of the image used
+        "imageSize": Number, //specifies the diameter of the image used
+        "drawLabel": Boolean  //if true then the label for the station is not drawn
       }
     }
   ]
