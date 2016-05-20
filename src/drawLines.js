@@ -24,6 +24,7 @@ value: function(panning){
 
     for (var i=0;i<stations.length;i++){
       this.linePaper.pen.beginPath();
+      this.linePaper.pen.lineTo((currX+adjustmentX), (currY+adjustmentY));
       this.linePaper.pen.moveTo((currX+adjustmentX), (currY+adjustmentY));
       if(this.lines[l].colour){
         this.linePaper.pen.strokeStyle = this.lines[l].colour;
@@ -41,9 +42,8 @@ value: function(panning){
         this.linePaper.pen.strokeStyle = this.inactiveColour;
       }
       this.linePaper.pen.lineWidth = this.lineWidth;
-      this.linePaper.pen.lineJoin = 'round';
+      this.linePaper.pen.lineJoin = "bevel";
       this.linePaper.pen.lineCap = 'round';
-
 
       if(stations[i+1]){
 
@@ -58,12 +58,12 @@ value: function(panning){
             else{
               adjustmentX = (this.lineSpacing * vLeft) + (this.lineSpacing * this.stations[stations[i].name].vRightLinesDrawn * vLeft);
             }
-            //if(i==0){
-              this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
-            //}
+            this.linePaper.pen.lineTo((currX+adjustmentX), (currY));
+            this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
           }
           else{
             adjustmentX = 0;
+            this.linePaper.pen.lineTo((currX+adjustmentX), (currY));
             this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
           }
         }
@@ -78,12 +78,12 @@ value: function(panning){
             else{
               adjustmentY = (this.lineSpacing * hBelow) + (this.lineSpacing * this.stations[stations[i].name].hAboveLinesDrawn * hBelow);
             }
-            //if(i==0){
-              this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
-            //}
+            this.linePaper.pen.lineTo((currX), (currY+adjustmentY));
+            this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
           }
           else{
             adjustmentY = 0;
+            this.linePaper.pen.lineTo((currX), (currY+adjustmentY));
             this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
           }
         }

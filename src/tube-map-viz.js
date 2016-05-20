@@ -164,6 +164,18 @@ this.TubeMapViz = (function(){
     stationRadius:{
       writable: true
     },
+    shortestDistance:{
+      writable: true
+    },
+    longestDistance:{
+      writable: true
+    },
+    longestLabelAllocation:{
+      writable: true
+    },
+    distanceMultiplier:{
+      writable: true
+    },
     lineWidth:{
       writable: true
     },

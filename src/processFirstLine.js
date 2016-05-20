@@ -7,7 +7,8 @@ value: function(){
 
   //we should draw this line centrally to the grid horizontally
   var label = this.stations[this.lines[0].stations[0].name].label;
-  var longestStation = this.lines[0].longestStation || 10;
+  // var longestStation = this.lines[0].longestStation || 10;
+  var longestStation = this.longestLabelAllocation || 10;
   startCellX = 1;
   startCellY = Math.ceil(this.gridSize.y/2);
 
@@ -16,8 +17,16 @@ value: function(){
     //based on the width of the label mark the relevant cells unusable
     var label = this.stations[this.lines[0].stations[s].name].label;
     if(s<stationCount){
-      for(var i=0;i<this.lines[0].longestStation+1;i++){
+      // for(var i=0;i<this.lines[0].longestStation+1;i++){
+      var stationLength = Math.round(this.longestLabelAllocation * (this.lines[0].stations[s].distanceToNext / this.shortestDistance));
+      var xAllocation = stationLength;
+      var yAllocation = this.longestLabelAllocation;
+      console.log(this.longestLabelAllocation);
+      console.log(stationLength);
+      for(var i=0;i<xAllocation+1;i++){
         this.useCell(startCellX+i,startCellY, "blocked");
+      }
+      for(var i=0;i<yAllocation+1;i++){
         this.useCell(startCellX,startCellY-i, "blocked");
       }
     }
@@ -29,8 +38,10 @@ value: function(){
 
     //allocate the position for the station label starting 1 cell immediately up and right of the station
     var labelY = startCellY-1, labelX = startCellX+1;
-    for(var v=0;v<this.lines[0].longestStation;v++){
-      for(var h=0;h<this.lines[0].longestStation;h++){
+    // for(var v=0;v<this.lines[0].longestStation;v++){
+    //   for(var h=0;h<this.lines[0].longestStation;h++){
+    for(var v=0;v<yAllocation;v++){
+      for(var h=0;h<xAllocation;h++){
         this.useCell(labelX+h,labelY-v, "label");
         if(v==0&&h==0){
           this.stations[this.lines[0].stations[s].name].labelLoc = this.grid[labelX][labelY];
@@ -38,8 +49,9 @@ value: function(){
       }
     }
     var station = this.lines[0].stations[s];
-
+    this.stations[this.lines[0].stations[s].name].xSpace = xAllocation;
+    this.stations[this.lines[0].stations[s].name].ySpace = yAllocation;
     //now we move to what would effectively be the end of the label
-    startCellX += longestStation+1;
+    startCellX += xAllocation+1;
   }
 }

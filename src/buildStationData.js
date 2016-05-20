@@ -7,6 +7,19 @@ value: function(lines){
       if(lines[l].name != lines[l2].name || lines.length == 1){
         //no need for a line to check against itself
         for(var lS in lines[l].stations){
+          if(lines[l].stations[lS].distanceToNext){
+            if(!this.shortestDistance){
+              this.shortestDistance = lines[l].stations[lS].distanceToNext;
+            }
+            if(!this.longestDistance){
+              this.longestDistance = lines[l].stations[lS].distanceToNext;
+            }
+            this.shortestDistance = Math.min(this.shortestDistance, lines[l].stations[lS].distanceToNext);
+            this.longestDistance = Math.max(this.longestDistance, lines[l].stations[lS].distanceToNext);
+          }
+          else{
+            lines[l].stations[lS].distanceToNext = 1;
+          }
           if(!this.stations[lines[l].stations[lS].name]){
             //this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hLinesDrawn:0, vLinesDrawn:0, status:lines[l].stations[lS].status, mode:"normal"};
             this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hLinesDrawn:0, vLinesDrawn:0, hAboveLinesDrawn:0, hBelowLinesDrawn:0, vLeftLinesDrawn:0, vRightLinesDrawn:0, mode:"normal"};
@@ -28,5 +41,15 @@ value: function(lines){
       }
     }
   }
+  console.log(this.shortestDistance);
+  console.log(this.longestDistance);
+  if(!this.shortestDistance || this.shortestDistance == "NaN"){
+    this.shortestDistance = 1;
+  }
+  if(!this.longestDistance || this.longestDistance == "NaN"){
+    this.longestDistance = 1;
+  }
+  this.distanceMultiplier = (this.shortestDistance / this.longestDistance);
+  console.log(this.distanceMultiplier);
   this.lines = lines;
 }
