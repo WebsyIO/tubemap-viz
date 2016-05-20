@@ -404,6 +404,18 @@ this.TubeMapViz = (function(){
     stationRadius:{
       writable: true
     },
+    shortestDistance:{
+      writable: true
+    },
+    longestDistance:{
+      writable: true
+    },
+    longestLabelAllocation:{
+      writable: true
+    },
+    distanceMultiplier:{
+      writable: true
+    },
     lineWidth:{
       writable: true
     },
@@ -591,7 +603,10 @@ this.TubeMapViz = (function(){
         var tries = 0;
         var requiredAllocation = station.label.hCount + 1;
         var potentialAllocation;
-        var potentialAllocationDistance = line.longestStation || 10;
+        // var potentialAllocationDistance = line.longestStation || 10;
+        var xAllocation;
+        var yAllocation;
+        var potentialAllocationDistance = this.longestLabelAllocation || 10;
         var restart = false;
         var startCell = this.grid[x][y];
         var labelTry = 0;
@@ -621,8 +636,25 @@ this.TubeMapViz = (function(){
           var startX = x+((iterationTries*iteration)*hIndex), startY = y+((iterationTries*iteration)*vIndex);
           var reservedCells = [];
           //start by finding a free cell for the station. we don't want to go further than 8 cells away
-          for (var i=0;i<potentialAllocationDistance;i++){
-            var potX = startX+(hIndex*i)+((potentialAllocationDistance-1)*hIndex), potY = startY+(vIndex*i)+((potentialAllocationDistance-1)*vIndex)
+          // for (var i=0;i<potentialAllocationDistance;i++){
+            // var potX = startX+(hIndex*i)+((potentialAllocationDistance-1)*hIndex), potY = startY+(vIndex*i)+((potentialAllocationDistance-1)*vIndex)
+            var potX, potY;
+            potX = x + (hIndex*1);
+            potY = y + (vIndex*1);
+            if(lastStation){
+              potX += (hIndex*lastStation.xSpace);
+              if(direction==2){
+                potY += (vIndex*Math.max(lastStation.ySpace, lastStation.xSpace));
+              }
+            }
+            if(direction==8){
+              if(lastStation){
+                potY+=Math.round(this.longestLabelAllocation * (lastStation.distanceToNext / this.shortestDistance));
+              }
+              else{
+                potY += Math.round(this.longestLabelAllocation * (station.distanceToNext / this.shortestDistance));
+              }
+            }
             if(!this.grid[potX]){
               this.grid[potX] = {};
             }
@@ -631,20 +663,30 @@ this.TubeMapViz = (function(){
             }
             if(this.grid[potX][potY] && !this.grid[potX][potY].occupied){
               potentialAllocation = this.grid[potX][potY];
-              break;
+              // break;
             }
             else if(this.grid[potX][potY] && this.grid[potX][potY].occupied){
               if(this.grid[potX][potY].item!="blocked"){
                 potentialAllocation = null;
-                break;
+                // break;
               }
             }
-          }
-          if(potentialAllocation && iterationTries < potentialAllocationDistance){
+          // }
+          // if(potentialAllocation && iterationTries < potentialAllocationDistance){
+          if(potentialAllocation){
             labelTry++;
             var needToChangeDirection = false, keepgoing = true;
+            xAllocation = this.longestLabelAllocation;
+            yAllocation = this.longestLabelAllocation;
+
+            if(direction==2 || direction==8){
+              yAllocation = Math.round(this.longestLabelAllocation * (station.distanceToNext / this.shortestDistance));
+            }
+            else if (direction==4 || direction==6) {
+              xAllocation = Math.round(this.longestLabelAllocation * (station.distanceToNext / this.shortestDistance));
+            }
             //we have a potentialAllocation, we need to make sure there's clearance to the side in case we go in that direction next
-            for(var i=1;i<station.label.hCount+1;i++){
+            for(var i=1;i<xAllocation+1;i++){
               if(!this.grid[potentialAllocation.h+i]){
                 this.grid[potentialAllocation.h+i] = {};
               }
@@ -661,75 +703,56 @@ this.TubeMapViz = (function(){
             if(keepgoing){
               //now we need to see if the label will fit as well
               var labelY = potentialAllocation.v-1, labelX = potentialAllocation.h+1;
-              var stationSpace = line.longestStation;
-
-              for(var v=0;v<stationSpace;v++){
-                for(var h=0;h<stationSpace;h++){
+              for(var v=0;v<yAllocation;v++){
+                for(var h=0;h<xAllocation;h++){
                   if(!this.grid[labelX+h]){
                     this.createNewGridCell(labelX+h, labelY-v);
                   }
-                    //no cell exists in that direction
-                    //we should revisit this logic
-                    // potentialAllocation = null;
-                    // restart = true;
-                    // break;
 
                   if(this.grid[labelX+h][labelY-v] && this.grid[labelX+h][labelY-v].occupied){
                     //then the potential allocation won't work so we move on
                     potentialAllocation = null;
-                    //needToChangeDirection = true; //just changed direction for now
-                    // if(this.grid[labelX+h][labelY-v].item!="label"){
-                    //   needToChangeDirection = true;
-                    // }
                     restart = true;
                     break;
                   }
                   else{
-                    // if(h==station.label.hCount-1){
-                    //   //we have space horizontally
-                    //   if(direction==4 || direction==6){
-                    //     needToChangeDirection = true;
-                    //   }
-                    // }
                     if(!this.grid[labelX+h][labelY-v]){
                       this.createNewGridCell(labelX+h,labelY-v);
                     }
                     reservedCells.push(this.grid[labelX+h][labelY-v]);
-                    if(v==stationSpace-1 && h==stationSpace-1){
+                    if(v==yAllocation-1 && h==xAllocation-1){
                       //we have space for the label and the station
                       if(this.debug){
                         console.log("Using cells for "+station.name);
                       }
                       if(lastStation){
                         //connect the dots back to the last station if we're going up
-                        var dotCount = (direction==2)?lastStation.label.hCount:station.label.hCount;
                         if(direction==2){
-                          for(var i=0;i<lastStation.label.hCount+1;i++){
+                          var dotCount = lastStation.vSpace;
+                          for(var i=0;i<dotCount+1;i++){
                             this.useCell(potentialAllocation.h,potentialAllocation.v+i, "blocked");
                           }
                         }
-                        for(var i=1;i<stationSpace+1;i++){
-                          if(this.debug){
-                            console.log("Blocking cells for "+station.name);
-                          }
-                          this.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
-                          this.useCell(potentialAllocation.h,potentialAllocation.v-i, "blocked");
-                        }
                       }
-                      else{
-                        for(var i=1;i<stationSpace+1;i++){
-                          if(this.debug){
-                            console.log("Blocking cells for "+station.name);
-                          }
-                          this.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
-                          this.useCell(potentialAllocation.h,potentialAllocation.v-i, "blocked");
+                      for(var i=1;i<xAllocation+1;i++){
+                        if(this.debug){
+                          console.log("Blocking cells for "+station.name);
                         }
+                        this.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
+                      }
+                      for(var i=1;i<yAllocation+1;i++){
+                        if(this.debug){
+                          console.log("Blocking cells for "+station.name);
+                        }
+                        this.useCell(potentialAllocation.h,potentialAllocation.v-i, "blocked");
                       }
                       this.useCell(potentialAllocation.h, potentialAllocation.v, "station");
                       for(var r=0;r<reservedCells.length;r++){
                         this.useCell(reservedCells[r].h, reservedCells[r].v, "label");
                       }
                       station.gridLoc = potentialAllocation;
+                      station.xSpace = xAllocation;
+                      station.ySpace = yAllocation;
                       station.labelLoc = reservedCells[0];
                       suitableAllocationFound = true;
                       return direction;
@@ -745,6 +768,12 @@ this.TubeMapViz = (function(){
                 }
               }
             }
+            else{
+              if(restart){
+                restart = false;
+              }
+              changeDirection.call(this);
+            }
           }
           else{
             changeDirection.call(this);
@@ -755,7 +784,7 @@ this.TubeMapViz = (function(){
             directionsTried.push(direction);
             switch (direction) {
               case 2: //up
-              case 8:
+              case 8: //down
                 direction = progression==-1?4:6;
                   break;
               case 4: //left
@@ -786,6 +815,19 @@ this.TubeMapViz = (function(){
             if(lines[l].name != lines[l2].name || lines.length == 1){
               //no need for a line to check against itself
               for(var lS in lines[l].stations){
+                if(lines[l].stations[lS].distanceToNext){
+                  if(!this.shortestDistance){
+                    this.shortestDistance = lines[l].stations[lS].distanceToNext;
+                  }
+                  if(!this.longestDistance){
+                    this.longestDistance = lines[l].stations[lS].distanceToNext;
+                  }
+                  this.shortestDistance = Math.min(this.shortestDistance, lines[l].stations[lS].distanceToNext);
+                  this.longestDistance = Math.max(this.longestDistance, lines[l].stations[lS].distanceToNext);
+                }
+                else{
+                  lines[l].stations[lS].distanceToNext = 1;
+                }
                 if(!this.stations[lines[l].stations[lS].name]){
                   //this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hLinesDrawn:0, vLinesDrawn:0, status:lines[l].stations[lS].status, mode:"normal"};
                   this.stations[lines[l].stations[lS].name] = {lines:[lines[l].name], hLinesDrawn:0, vLinesDrawn:0, hAboveLinesDrawn:0, hBelowLinesDrawn:0, vLeftLinesDrawn:0, vRightLinesDrawn:0, mode:"normal"};
@@ -807,6 +849,16 @@ this.TubeMapViz = (function(){
             }
           }
         }
+        console.log(this.shortestDistance);
+        console.log(this.longestDistance);
+        if(!this.shortestDistance || this.shortestDistance == "NaN"){
+          this.shortestDistance = 1;
+        }
+        if(!this.longestDistance || this.longestDistance == "NaN"){
+          this.longestDistance = 1;
+        }
+        this.distanceMultiplier = (this.shortestDistance / this.longestDistance);
+        console.log(this.distanceMultiplier);
         this.lines = lines;
       }
 
@@ -849,7 +901,8 @@ this.TubeMapViz = (function(){
 
         //we should draw this line centrally to the grid horizontally
         var label = this.stations[this.lines[0].stations[0].name].label;
-        var longestStation = this.lines[0].longestStation || 10;
+        // var longestStation = this.lines[0].longestStation || 10;
+        var longestStation = this.longestLabelAllocation || 10;
         startCellX = 1;
         startCellY = Math.ceil(this.gridSize.y/2);
 
@@ -858,8 +911,16 @@ this.TubeMapViz = (function(){
           //based on the width of the label mark the relevant cells unusable
           var label = this.stations[this.lines[0].stations[s].name].label;
           if(s<stationCount){
-            for(var i=0;i<this.lines[0].longestStation+1;i++){
+            // for(var i=0;i<this.lines[0].longestStation+1;i++){
+            var stationLength = Math.round(this.longestLabelAllocation * (this.lines[0].stations[s].distanceToNext / this.shortestDistance));
+            var xAllocation = stationLength;
+            var yAllocation = this.longestLabelAllocation;
+            console.log(this.longestLabelAllocation);
+            console.log(stationLength);
+            for(var i=0;i<xAllocation+1;i++){
               this.useCell(startCellX+i,startCellY, "blocked");
+            }
+            for(var i=0;i<yAllocation+1;i++){
               this.useCell(startCellX,startCellY-i, "blocked");
             }
           }
@@ -871,8 +932,10 @@ this.TubeMapViz = (function(){
 
           //allocate the position for the station label starting 1 cell immediately up and right of the station
           var labelY = startCellY-1, labelX = startCellX+1;
-          for(var v=0;v<this.lines[0].longestStation;v++){
-            for(var h=0;h<this.lines[0].longestStation;h++){
+          // for(var v=0;v<this.lines[0].longestStation;v++){
+          //   for(var h=0;h<this.lines[0].longestStation;h++){
+          for(var v=0;v<yAllocation;v++){
+            for(var h=0;h<xAllocation;h++){
               this.useCell(labelX+h,labelY-v, "label");
               if(v==0&&h==0){
                 this.stations[this.lines[0].stations[s].name].labelLoc = this.grid[labelX][labelY];
@@ -880,9 +943,10 @@ this.TubeMapViz = (function(){
             }
           }
           var station = this.lines[0].stations[s];
-
+          this.stations[this.lines[0].stations[s].name].xSpace = xAllocation;
+          this.stations[this.lines[0].stations[s].name].ySpace = yAllocation;
           //now we move to what would effectively be the end of the label
-          startCellX += longestStation+1;
+          startCellX += xAllocation+1;
         }
       }
 
@@ -1065,10 +1129,14 @@ this.TubeMapViz = (function(){
             for(var i=0;i<this.stations[s].lines.length;i++){
               for(var l=0;l<this.lines.length;l++){
                 if(this.stations[s].lines[i]==this.lines[l].name){
-                  if(!this.lines[l].longestStation){
-                    this.lines[l].longestStation = 0;
+                  // if(!this.lines[l].longestStation){
+                  //   this.lines[l].longestStation = 0;
+                  // }
+                  // this.lines[l].longestStation = Math.max(this.lines[l].longestStation, Math.ceil(lineLength/this.cellWidth));
+                  if(!this.longestLabelAllocation){
+                    this.longestLabelAllocation = 0;
                   }
-                  this.lines[l].longestStation = Math.max(this.lines[l].longestStation, Math.ceil(lineLength/this.cellWidth));
+                  this.longestLabelAllocation = Math.max(this.longestLabelAllocation, Math.ceil(lineLength/this.cellWidth));
                 }
               }
             }
@@ -1313,6 +1381,7 @@ this.TubeMapViz = (function(){
 
           for (var i=0;i<stations.length;i++){
             this.linePaper.pen.beginPath();
+            this.linePaper.pen.lineTo((currX+adjustmentX), (currY+adjustmentY));
             this.linePaper.pen.moveTo((currX+adjustmentX), (currY+adjustmentY));
             if(this.lines[l].colour){
               this.linePaper.pen.strokeStyle = this.lines[l].colour;
@@ -1330,9 +1399,8 @@ this.TubeMapViz = (function(){
               this.linePaper.pen.strokeStyle = this.inactiveColour;
             }
             this.linePaper.pen.lineWidth = this.lineWidth;
-            this.linePaper.pen.lineJoin = 'round';
+            this.linePaper.pen.lineJoin = "bevel";
             this.linePaper.pen.lineCap = 'round';
-
 
             if(stations[i+1]){
 
@@ -1347,12 +1415,12 @@ this.TubeMapViz = (function(){
                   else{
                     adjustmentX = (this.lineSpacing * vLeft) + (this.lineSpacing * this.stations[stations[i].name].vRightLinesDrawn * vLeft);
                   }
-                  //if(i==0){
-                    this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
-                  //}
+                  this.linePaper.pen.lineTo((currX+adjustmentX), (currY));
+                  this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
                 }
                 else{
                   adjustmentX = 0;
+                  this.linePaper.pen.lineTo((currX+adjustmentX), (currY));
                   this.linePaper.pen.moveTo((currX+adjustmentX), (currY));
                 }
               }
@@ -1367,12 +1435,12 @@ this.TubeMapViz = (function(){
                   else{
                     adjustmentY = (this.lineSpacing * hBelow) + (this.lineSpacing * this.stations[stations[i].name].hAboveLinesDrawn * hBelow);
                   }
-                  //if(i==0){
-                    this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
-                  //}
+                  this.linePaper.pen.lineTo((currX), (currY+adjustmentY));
+                  this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
                 }
                 else{
                   adjustmentY = 0;
+                  this.linePaper.pen.lineTo((currX), (currY+adjustmentY));
                   this.linePaper.pen.moveTo((currX), (currY+adjustmentY));
                 }
               }
@@ -1945,6 +2013,7 @@ this.TubeMapViz = (function(){
             {
               name: "Station A",
               status: 1,
+              distanceToNext: 10,
               custom:{
                 fill: "#ff7373",
                 scale: 2
@@ -1952,15 +2021,18 @@ this.TubeMapViz = (function(){
             },
             {
               name: "Station B",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station C",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station D",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             }
           ]
         },
@@ -1970,19 +2042,23 @@ this.TubeMapViz = (function(){
           stations: [
             {
               name: "Station D",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station E",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station F",
-              status: 1
+              status: 1,
+              distanceToNext: 15,
             },
             {
               name: "Station G",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             }
           ]
         },
@@ -1992,31 +2068,38 @@ this.TubeMapViz = (function(){
           stations:[
             {
               name: "Station C",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station D",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station E",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station F",
-              status: 1
+              status: 1,
+              distanceToNext: 15,
             },
             {
               name: "Station J",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station K",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station L",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             }
           ]
         },
@@ -2026,19 +2109,23 @@ this.TubeMapViz = (function(){
           stations: [
             {
               name: "Station D",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station E",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station H",
-              status: 0
+              status: 0,
+              distanceToNext: 5,
             },
             {
               name: "Station I",
-              status: 0
+              status: 0,
+              distanceToNext: 5,
             }
           ]
         },
@@ -2049,6 +2136,7 @@ this.TubeMapViz = (function(){
             {
               name: "Station M",
               status: 1,
+              distanceToNext: 5,
               custom:{
                 fill: "#86ae22",
                 scale: 2
@@ -2056,23 +2144,28 @@ this.TubeMapViz = (function(){
             },
             {
               name: "Station N",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station O",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station P",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station Q",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             },
             {
               name: "Station R",
-              status: 1
+              status: 1,
+              distanceToNext: 5,
             }
           ]
         }

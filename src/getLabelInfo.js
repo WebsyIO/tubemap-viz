@@ -41,10 +41,14 @@ value: function(){
       for(var i=0;i<this.stations[s].lines.length;i++){
         for(var l=0;l<this.lines.length;l++){
           if(this.stations[s].lines[i]==this.lines[l].name){
-            if(!this.lines[l].longestStation){
-              this.lines[l].longestStation = 0;
+            // if(!this.lines[l].longestStation){
+            //   this.lines[l].longestStation = 0;
+            // }
+            // this.lines[l].longestStation = Math.max(this.lines[l].longestStation, Math.ceil(lineLength/this.cellWidth));
+            if(!this.longestLabelAllocation){
+              this.longestLabelAllocation = 0;
             }
-            this.lines[l].longestStation = Math.max(this.lines[l].longestStation, Math.ceil(lineLength/this.cellWidth));
+            this.longestLabelAllocation = Math.max(this.longestLabelAllocation, Math.ceil(lineLength/this.cellWidth));
           }
         }
       }
