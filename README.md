@@ -105,8 +105,10 @@ stationClicked: function(station){
 }
 ```
 ####Rendering Logic
+*To calculate station positions a virtual grid is created where the size of a cell is equal to 2 * stationRadius
 *Lines are drawn in the same order they are provided
 *Lines will always draw from left to right
 *Where a line cannot continue in a given horizontal direction it will look for an alternative vertical route, starting in a downward direction
 *Lines are only drawn horizontally and vertically
 *Multiple lines that share 2 or more consecutive stations will be drawn parallel
+*Lines do not pass through reserved space (e.g. labels, stations and other lines)
