@@ -1,7 +1,14 @@
-include "events.js"
-
-var TubeMapViz = (function(){
+this.TubeMapViz = (function(){
+  include "events.js"
   function TubeMapViz(options){
+    if(!window.requestAnimFrame){
+      window.requestAnimFrame = (function(callback) {
+        return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame ||
+        function(callback) {
+          window.setTimeout(callback, 1000 / 60);
+        };
+      })();
+    }
     options = options || {};
     this.debug = options.debug || false;
     this.disableHighlighting = options.disableHighlighting || false;
@@ -407,11 +414,3 @@ var TubeMapViz = (function(){
   });
   return TubeMapViz;
 }());
-if(!window.requestAnimFrame){
-  window.requestAnimFrame = (function(callback) {
-    return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame ||
-    function(callback) {
-      window.setTimeout(callback, 1000 / 60);
-    };
-  })();
-}
