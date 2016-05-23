@@ -28,12 +28,12 @@ The data expected by the map is an array of objects structured like this
 ```javascript
 {
   "name": String, (required)
-  "colour": String,
+  "colour": String, //if set overrides the colours property in the map options
   "stations": Array (required) [
     {
       "name": String (required),
       "status": Number, //1 - default || 0 - draws an inactive line either side of the station using the specified 'inactiveColour'
-      "distanceToNext": Number, //if set is used to determine the distance between this and the next station
+      "distanceToNext": Number, //if set is used to determine the distance between this and the next station. a scale is created using the min and max values.
       "custom": {
         "fill": String, //overrides the station fill colour
         "stroke": String, //overrides the station stroke colour
@@ -67,6 +67,7 @@ The following is a list of available options
   "stationRadius": Number,  //defaults to 8;
   "lineWidth": Number,  //defaults to 5;
   "lineSpacing": Number,  //defaults to 5;
+  "colours": Array, // defaults to ["#ff7373","#ffd546","#d47dbe","#68b5de","#86ae22"].
   "labelLineHeight": Number,  //defaults to 13;
   "labelColour": String,  //defaults to "black";
   "labelWrapThreshold": Number, //defaults to 4 cells. cell size is equal to 2 x stationRadius;
