@@ -90,25 +90,43 @@ value: function(x, y, station, lastStation, line, progression, direction){
         xAllocation = Math.round(this.longestLabelAllocation * (station.distanceToNext / this.shortestDistance));
       }
       //we have a potentialAllocation, we need to make sure there's clearance to the side in case we go in that direction next
-      for(var i=1;i<xAllocation+1;i++){
-        if(!this.grid[potentialAllocation.h+i]){
-          this.grid[potentialAllocation.h+i] = {};
+      if(direction==4||direction==6){
+        for(var i=1;i<xAllocation+1;i++){
+          if(!this.grid[potentialAllocation.h+(i*hIndex)]){
+            this.grid[potentialAllocation.h+(i*hIndex)] = {};
+          }
+          if(!this.grid[potentialAllocation.h+(i*hIndex)][potentialAllocation.v]){
+            this.createNewGridCell(potentialAllocation.h+(i*hIndex), potentialAllocation.v);
+          }
+          if(this.grid[potentialAllocation.h+(i*hIndex)][potentialAllocation.v] && this.grid[potentialAllocation.h+(i*hIndex)][potentialAllocation.v].occupied){
+            potentialAllocation = null;
+            keepgoing = false;
+            restart = true;
+            break;
+          }
         }
-        if(!this.grid[potentialAllocation.h+i][potentialAllocation.v]){
-          this.createNewGridCell(potentialAllocation.h+i, potentialAllocation.v);
-        }
-        if(this.grid[potentialAllocation.h+i][potentialAllocation.v] && this.grid[potentialAllocation.h+i][potentialAllocation.v].occupied){
-          potentialAllocation = null;
-          keepgoing = false;
-          restart = true;
-          break;
+      }
+      else{
+        for(var i=1;i<yAllocation+1;i++){
+          if(!this.grid[potentialAllocation.h]){
+            this.grid[potentialAllocation.h] = {};
+          }
+          if(!this.grid[potentialAllocation.h][potentialAllocation.v+(i*vIndex)]){
+            this.createNewGridCell(potentialAllocation.h, potentialAllocation.v+(i*vIndex));
+          }
+          if(this.grid[potentialAllocation.h][potentialAllocation.v+(i*vIndex)] && this.grid[potentialAllocation.h][potentialAllocation.v+(i*vIndex)].occupied){
+            potentialAllocation = null;
+            keepgoing = false;
+            restart = true;
+            break;
+          }
         }
       }
       if(keepgoing){
         //now we need to see if the label will fit as well
         var labelY = potentialAllocation.v-1, labelX = potentialAllocation.h+1;
-        for(var v=0;v<yAllocation;v++){
-          for(var h=0;h<xAllocation;h++){
+        for(var v=0;v<this.longestLabelAllocation;v++){
+          for(var h=0;h<this.longestLabelAllocation;h++){
             if(!this.grid[labelX+h]){
               this.createNewGridCell(labelX+h, labelY-v);
             }
@@ -124,7 +142,7 @@ value: function(x, y, station, lastStation, line, progression, direction){
                 this.createNewGridCell(labelX+h,labelY-v);
               }
               reservedCells.push(this.grid[labelX+h][labelY-v]);
-              if(v==yAllocation-1 && h==xAllocation-1){
+              if(v==this.longestLabelAllocation-1 && h==this.longestLabelAllocation-1){
                 //we have space for the label and the station
                 if(this.debug){
                   console.log("Using cells for "+station.name);
@@ -138,13 +156,13 @@ value: function(x, y, station, lastStation, line, progression, direction){
                     }
                   }
                 }
-                for(var i=1;i<xAllocation+1;i++){
+                for(var i=1;i<this.longestLabelAllocation+1;i++){
                   if(this.debug){
                     console.log("Blocking cells for "+station.name);
                   }
                   this.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
                 }
-                for(var i=1;i<yAllocation+1;i++){
+                for(var i=1;i<this.longestLabelAllocation+1;i++){
                   if(this.debug){
                     console.log("Blocking cells for "+station.name);
                   }
@@ -165,9 +183,7 @@ value: function(x, y, station, lastStation, line, progression, direction){
           }
           if(restart){
             restart = false;
-            if(labelTry > 8 || needToChangeDirection){
-              changeDirection.call(this);
-            }
+            changeDirection.call(this);
             break;
           }
         }

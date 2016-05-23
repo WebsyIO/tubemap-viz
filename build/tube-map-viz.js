@@ -277,11 +277,11 @@ this.TubeMapViz = (function(){
     this.allowZoom = options.allowZoom || true;
     this.zoomToFit = options.zoomToFit || true;
     this.colours = options.colours || [
-      "#61A729",
-      "#EE5A35",
-      "#4591BA",
-      "yellow",
-      "pink"
+      "#ff7373",
+      "#ffd546",
+      "#d47dbe",
+      "#68b5de",
+      "#86ae22"
     ];
     var ctx = document.createElement("canvas").getContext("2d"),
         dpr = window.devicePixelRatio || 1,
@@ -354,6 +354,10 @@ this.TubeMapViz = (function(){
     zoomSteps:{
       writable: true,
       value: []
+    },
+    zooming: {
+      writable: true,
+      value: false
     },
     boundLeft:{
       writable: true,
@@ -454,7 +458,9 @@ this.TubeMapViz = (function(){
         if(element){
           element.innerHTML = "";
           if(!this.listening){
-            console.log('adding event listeners to element');
+            if(this.debug){
+              console.log('adding event listeners to element');
+            }
             element.addEventListener('resize', this.render.bind(this), false);
             //element.addEventListener('wheel', this.zoom.bind(this), false);
             element.addEventListener('mousedown', this.startPan.bind(this), true);
@@ -484,6 +490,21 @@ this.TubeMapViz = (function(){
           this.gridSize.x = Math.floor(width / this.cellWidth);
           this.gridSize.y = Math.floor(height / this.cellHeight);
           this.baseY = Math.ceil(this.gridSize.y/2);
+          //grid canvas
+          var gridCanvas = document.createElement('canvas');
+          this.gridPaper = {
+            canvas: gridCanvas,
+            pen: gridCanvas.getContext('2d')
+          };
+          this.gridPaper.canvas.style.position = "absolute";
+          this.gridPaper.canvas.style.top = "0px";
+          this.gridPaper.canvas.style.left = "0px";
+          this.gridPaper.canvas.style.zIndex = "5";
+          this.gridPaper.canvas.width = width;
+          this.gridPaper.canvas.height = height;
+          if(this.debug){
+            element.appendChild(this.gridPaper.canvas);
+          }
           //debug canvas
           var debugCanvas = document.createElement('canvas');
           this.debugPaper = {
@@ -585,10 +606,13 @@ this.TubeMapViz = (function(){
         }
         else{
           //we reset the width of each canvas to effectively to clear the canvases
+          this.gridPaper.canvas.width = this.width;
           this.debugPaper.canvas.width = this.width;
           this.linePaper.canvas.width = this.width;
+          this.imagePaper.canvas.width = this.width;
           this.stationPaper.canvas.width = this.width;
           this.labelPaper.canvas.width = this.width;
+          this.legendPaper.canvas.width = this.width;
         }
       }
 
@@ -686,25 +710,43 @@ this.TubeMapViz = (function(){
               xAllocation = Math.round(this.longestLabelAllocation * (station.distanceToNext / this.shortestDistance));
             }
             //we have a potentialAllocation, we need to make sure there's clearance to the side in case we go in that direction next
-            for(var i=1;i<xAllocation+1;i++){
-              if(!this.grid[potentialAllocation.h+i]){
-                this.grid[potentialAllocation.h+i] = {};
+            if(direction==4||direction==6){
+              for(var i=1;i<xAllocation+1;i++){
+                if(!this.grid[potentialAllocation.h+(i*hIndex)]){
+                  this.grid[potentialAllocation.h+(i*hIndex)] = {};
+                }
+                if(!this.grid[potentialAllocation.h+(i*hIndex)][potentialAllocation.v]){
+                  this.createNewGridCell(potentialAllocation.h+(i*hIndex), potentialAllocation.v);
+                }
+                if(this.grid[potentialAllocation.h+(i*hIndex)][potentialAllocation.v] && this.grid[potentialAllocation.h+(i*hIndex)][potentialAllocation.v].occupied){
+                  potentialAllocation = null;
+                  keepgoing = false;
+                  restart = true;
+                  break;
+                }
               }
-              if(!this.grid[potentialAllocation.h+i][potentialAllocation.v]){
-                this.createNewGridCell(potentialAllocation.h+i, potentialAllocation.v);
-              }
-              if(this.grid[potentialAllocation.h+i][potentialAllocation.v] && this.grid[potentialAllocation.h+i][potentialAllocation.v].occupied){
-                potentialAllocation = null;
-                keepgoing = false;
-                restart = true;
-                break;
+            }
+            else{
+              for(var i=1;i<yAllocation+1;i++){
+                if(!this.grid[potentialAllocation.h]){
+                  this.grid[potentialAllocation.h] = {};
+                }
+                if(!this.grid[potentialAllocation.h][potentialAllocation.v+(i*vIndex)]){
+                  this.createNewGridCell(potentialAllocation.h, potentialAllocation.v+(i*vIndex));
+                }
+                if(this.grid[potentialAllocation.h][potentialAllocation.v+(i*vIndex)] && this.grid[potentialAllocation.h][potentialAllocation.v+(i*vIndex)].occupied){
+                  potentialAllocation = null;
+                  keepgoing = false;
+                  restart = true;
+                  break;
+                }
               }
             }
             if(keepgoing){
               //now we need to see if the label will fit as well
               var labelY = potentialAllocation.v-1, labelX = potentialAllocation.h+1;
-              for(var v=0;v<yAllocation;v++){
-                for(var h=0;h<xAllocation;h++){
+              for(var v=0;v<this.longestLabelAllocation;v++){
+                for(var h=0;h<this.longestLabelAllocation;h++){
                   if(!this.grid[labelX+h]){
                     this.createNewGridCell(labelX+h, labelY-v);
                   }
@@ -720,7 +762,7 @@ this.TubeMapViz = (function(){
                       this.createNewGridCell(labelX+h,labelY-v);
                     }
                     reservedCells.push(this.grid[labelX+h][labelY-v]);
-                    if(v==yAllocation-1 && h==xAllocation-1){
+                    if(v==this.longestLabelAllocation-1 && h==this.longestLabelAllocation-1){
                       //we have space for the label and the station
                       if(this.debug){
                         console.log("Using cells for "+station.name);
@@ -734,13 +776,13 @@ this.TubeMapViz = (function(){
                           }
                         }
                       }
-                      for(var i=1;i<xAllocation+1;i++){
+                      for(var i=1;i<this.longestLabelAllocation+1;i++){
                         if(this.debug){
                           console.log("Blocking cells for "+station.name);
                         }
                         this.useCell(potentialAllocation.h+i,potentialAllocation.v, "blocked");
                       }
-                      for(var i=1;i<yAllocation+1;i++){
+                      for(var i=1;i<this.longestLabelAllocation+1;i++){
                         if(this.debug){
                           console.log("Blocking cells for "+station.name);
                         }
@@ -761,9 +803,7 @@ this.TubeMapViz = (function(){
                 }
                 if(restart){
                   restart = false;
-                  if(labelTry > 8 || needToChangeDirection){
-                    changeDirection.call(this);
-                  }
+                  changeDirection.call(this);
                   break;
                 }
               }
@@ -849,8 +889,6 @@ this.TubeMapViz = (function(){
             }
           }
         }
-        console.log(this.shortestDistance);
-        console.log(this.longestDistance);
         if(!this.shortestDistance || this.shortestDistance == "NaN"){
           this.shortestDistance = 1;
         }
@@ -915,8 +953,6 @@ this.TubeMapViz = (function(){
             var stationLength = Math.round(this.longestLabelAllocation * (this.lines[0].stations[s].distanceToNext / this.shortestDistance));
             var xAllocation = stationLength;
             var yAllocation = this.longestLabelAllocation;
-            console.log(this.longestLabelAllocation);
-            console.log(stationLength);
             for(var i=0;i<xAllocation+1;i++){
               this.useCell(startCellX+i,startCellY, "blocked");
             }
@@ -1232,6 +1268,8 @@ this.TubeMapViz = (function(){
     },
     centerMap:{
       value: function(){
+        //reset any zoom variables
+        this.zoomSteps = [];
         //using the boundary values set the start position of the map
         this.mapWidth = this.boundRight -  this.boundLeft + 60;   //the +60 gives us a margin
         this.mapHeight = this.boundBottom - this.boundTop;
@@ -1285,8 +1323,7 @@ this.TubeMapViz = (function(){
           else{
             this.pixelMultiplier = this.zoomSteps[this.zoomSteps.length-1];
             this.zoomLevel = this.zoomSteps.length-1;
-          }
-
+          }    
         }
         function decimalAdjust(type, value, exp) {
           // If the exp is undefined or zero...
@@ -1338,18 +1375,21 @@ this.TubeMapViz = (function(){
           var currX = 0, currY = 0;
           var gridCount = 0;
           var cellWidth = this.cellWidth, cellHeight = this.cellHeight;
+          this.gridPaper.canvas.width = this.width;
+          this.gridPaper.pen.translate(this.posX, this.posY);
+          this.gridPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);
           this.debugPaper.canvas.width = this.width;
           this.debugPaper.pen.translate(this.posX, this.posY);
-          this.debugPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);  
+          this.debugPaper.pen.scale(this.pixelMultiplier,this.pixelMultiplier);
           //draw the grid (debugging only) and calculate the cell structure
-          this.debugPaper.pen.beginPath();
-          this.debugPaper.pen.strokeStyle = "#E2E2E2";
+          this.gridPaper.pen.beginPath();
+          this.gridPaper.pen.strokeStyle = "#E2E2E2";
           for (var h in this.grid){
             for(var v in this.grid[h]){
-              this.debugPaper.pen.rect(this.grid[h][v].locs.a.x, this.grid[h][v].locs.a.y, this.cellWidth, this.cellHeight);
+              this.gridPaper.pen.rect(this.grid[h][v].locs.a.x, this.grid[h][v].locs.a.y, this.cellWidth, this.cellHeight);
             }
           }
-          this.debugPaper.pen.stroke();
+          this.gridPaper.pen.stroke();
         }
       }
 
@@ -2269,37 +2309,44 @@ this.TubeMapViz = (function(){
     },
     zoomIn:{
       value: function(){
-        this.animateZoom(1, 10, 1, function(){
-          this.zoomLevel++;
-          this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
-          console.log(this.pixelMultiplier);
-          this.drawGrid();
-          this.drawLines(true);
-          this.drawStations();
-          this.drawLabels();
-          this.drawImages();
-          this.drawZoomControls();
-          this.createEventListeners();
-        });
+        if(!this.zooming){
+          this.animateZoom(1, 10, 1, function(){
+            this.zoomLevel++;
+            this.zooming = false;
+            this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
+            console.log(this.pixelMultiplier);
+            this.drawGrid();
+            this.drawLines(true);
+            this.drawStations();
+            this.drawLabels();
+            this.drawImages();
+            this.drawZoomControls();
+            this.createEventListeners();
+          });
+        }
       }
     },
     zoomOut:{
       value: function(event){
-        this.animateZoom(1, 10, -1, function(){
-          this.zoomLevel--;
-          this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
-          this.drawGrid();
-          this.drawLines(true);
-          this.drawStations();
-          this.drawLabels();
-          this.drawImages();
-          this.drawZoomControls();
-          this.createEventListeners();
-        });
+        if(!this.zooming){
+          this.animateZoom(1, 10, -1, function(){
+            this.zoomLevel--;
+            this.zooming = false;
+            this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
+            this.drawGrid();
+            this.drawLines(true);
+            this.drawStations();
+            this.drawLabels();
+            this.drawImages();
+            this.drawZoomControls();
+            this.createEventListeners();
+          });
+        }
       }
     },
     animateZoom: {
       value: function(curr, max, step, callbackFn){
+        this.zooming = true;
         var that = this;
         this.pixelMultiplier += step/max/10;
         requestAnimFrame(function(){

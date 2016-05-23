@@ -2,7 +2,9 @@ value: function(element, data){
   if(element){
     element.innerHTML = "";
     if(!this.listening){
-      console.log('adding event listeners to element');
+      if(this.debug){
+        console.log('adding event listeners to element');
+      }
       element.addEventListener('resize', this.render.bind(this), false);
       //element.addEventListener('wheel', this.zoom.bind(this), false);
       element.addEventListener('mousedown', this.startPan.bind(this), true);
@@ -32,6 +34,21 @@ value: function(element, data){
     this.gridSize.x = Math.floor(width / this.cellWidth);
     this.gridSize.y = Math.floor(height / this.cellHeight);
     this.baseY = Math.ceil(this.gridSize.y/2);
+    //grid canvas
+    var gridCanvas = document.createElement('canvas');
+    this.gridPaper = {
+      canvas: gridCanvas,
+      pen: gridCanvas.getContext('2d')
+    };
+    this.gridPaper.canvas.style.position = "absolute";
+    this.gridPaper.canvas.style.top = "0px";
+    this.gridPaper.canvas.style.left = "0px";
+    this.gridPaper.canvas.style.zIndex = "5";
+    this.gridPaper.canvas.width = width;
+    this.gridPaper.canvas.height = height;
+    if(this.debug){
+      element.appendChild(this.gridPaper.canvas);
+    }
     //debug canvas
     var debugCanvas = document.createElement('canvas');
     this.debugPaper = {
@@ -133,9 +150,12 @@ value: function(element, data){
   }
   else{
     //we reset the width of each canvas to effectively to clear the canvases
+    this.gridPaper.canvas.width = this.width;
     this.debugPaper.canvas.width = this.width;
     this.linePaper.canvas.width = this.width;
+    this.imagePaper.canvas.width = this.width;
     this.stationPaper.canvas.width = this.width;
     this.labelPaper.canvas.width = this.width;
+    this.legendPaper.canvas.width = this.width;
   }
 }

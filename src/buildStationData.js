@@ -41,8 +41,6 @@ value: function(lines){
       }
     }
   }
-  console.log(this.shortestDistance);
-  console.log(this.longestDistance);
   if(!this.shortestDistance || this.shortestDistance == "NaN"){
     this.shortestDistance = 1;
   }
