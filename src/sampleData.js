@@ -6,7 +6,6 @@ value: [
       {
         name: "Station A",
         status: 1,
-        distanceToNext: 10,
         custom:{
           fill: "#ff7373",
           scale: 2
@@ -14,18 +13,15 @@ value: [
       },
       {
         name: "Station B",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station C",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station D",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       }
     ]
   },
@@ -35,23 +31,19 @@ value: [
     stations: [
       {
         name: "Station D",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station E",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station F",
-        status: 1,
-        distanceToNext: 15,
+        status: 1
       },
       {
         name: "Station G",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       }
     ]
   },
@@ -61,38 +53,31 @@ value: [
     stations:[
       {
         name: "Station C",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station D",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station E",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station F",
-        status: 1,
-        distanceToNext: 15,
+        status: 1
       },
       {
         name: "Station J",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station K",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station L",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       }
     ]
   },
@@ -102,23 +87,19 @@ value: [
     stations: [
       {
         name: "Station D",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station E",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station H",
-        status: 0,
-        distanceToNext: 5,
+        status: 0
       },
       {
         name: "Station I",
-        status: 0,
-        distanceToNext: 5,
+        status: 0
       }
     ]
   },
@@ -129,7 +110,6 @@ value: [
       {
         name: "Station M",
         status: 1,
-        distanceToNext: 5,
         custom:{
           fill: "#86ae22",
           scale: 2
@@ -137,28 +117,23 @@ value: [
       },
       {
         name: "Station N",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station O",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station P",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station Q",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       },
       {
         name: "Station R",
-        status: 1,
-        distanceToNext: 5,
+        status: 1
       }
     ]
   }
