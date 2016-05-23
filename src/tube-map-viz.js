@@ -37,11 +37,11 @@ this.TubeMapViz = (function(){
     this.allowZoom = options.allowZoom || true;
     this.zoomToFit = options.zoomToFit || true;
     this.colours = options.colours || [
-      "#61A729",
-      "#EE5A35",
-      "#4591BA",
-      "yellow",
-      "pink"
+      "#ff7373",
+      "#ffd546",
+      "#d47dbe",
+      "#68b5de",
+      "#86ae22"
     ];
     var ctx = document.createElement("canvas").getContext("2d"),
         dpr = window.devicePixelRatio || 1,
@@ -114,6 +114,10 @@ this.TubeMapViz = (function(){
     zoomSteps:{
       writable: true,
       value: []
+    },
+    zooming: {
+      writable: true,
+      value: false
     },
     boundLeft:{
       writable: true,
@@ -372,37 +376,44 @@ this.TubeMapViz = (function(){
     },
     zoomIn:{
       value: function(){
-        this.animateZoom(1, 10, 1, function(){
-          this.zoomLevel++;
-          this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
-          console.log(this.pixelMultiplier);
-          this.drawGrid();
-          this.drawLines(true);
-          this.drawStations();
-          this.drawLabels();
-          this.drawImages();
-          this.drawZoomControls();
-          this.createEventListeners();
-        });
+        if(!this.zooming){
+          this.animateZoom(1, 10, 1, function(){
+            this.zoomLevel++;
+            this.zooming = false;
+            this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
+            console.log(this.pixelMultiplier);
+            this.drawGrid();
+            this.drawLines(true);
+            this.drawStations();
+            this.drawLabels();
+            this.drawImages();
+            this.drawZoomControls();
+            this.createEventListeners();
+          });
+        }
       }
     },
     zoomOut:{
       value: function(event){
-        this.animateZoom(1, 10, -1, function(){
-          this.zoomLevel--;
-          this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
-          this.drawGrid();
-          this.drawLines(true);
-          this.drawStations();
-          this.drawLabels();
-          this.drawImages();
-          this.drawZoomControls();
-          this.createEventListeners();
-        });
+        if(!this.zooming){
+          this.animateZoom(1, 10, -1, function(){
+            this.zoomLevel--;
+            this.zooming = false;
+            this.pixelMultiplier = this.zoomSteps[this.zoomLevel];
+            this.drawGrid();
+            this.drawLines(true);
+            this.drawStations();
+            this.drawLabels();
+            this.drawImages();
+            this.drawZoomControls();
+            this.createEventListeners();
+          });
+        }
       }
     },
     animateZoom: {
       value: function(curr, max, step, callbackFn){
+        this.zooming = true;
         var that = this;
         this.pixelMultiplier += step/max/10;
         requestAnimFrame(function(){

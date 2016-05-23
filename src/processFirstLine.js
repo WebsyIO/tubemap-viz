@@ -21,8 +21,6 @@ value: function(){
       var stationLength = Math.round(this.longestLabelAllocation * (this.lines[0].stations[s].distanceToNext / this.shortestDistance));
       var xAllocation = stationLength;
       var yAllocation = this.longestLabelAllocation;
-      console.log(this.longestLabelAllocation);
-      console.log(stationLength);
       for(var i=0;i<xAllocation+1;i++){
         this.useCell(startCellX+i,startCellY, "blocked");
       }

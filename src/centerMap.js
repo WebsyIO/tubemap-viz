@@ -1,4 +1,6 @@
 value: function(){
+  //reset any zoom variables
+  this.zoomSteps = [];
   //using the boundary values set the start position of the map
   this.mapWidth = this.boundRight -  this.boundLeft + 60;   //the +60 gives us a margin
   this.mapHeight = this.boundBottom - this.boundTop;
@@ -52,8 +54,7 @@ value: function(){
     else{
       this.pixelMultiplier = this.zoomSteps[this.zoomSteps.length-1];
       this.zoomLevel = this.zoomSteps.length-1;
-    }
-
+    }    
   }
   function decimalAdjust(type, value, exp) {
     // If the exp is undefined or zero...
