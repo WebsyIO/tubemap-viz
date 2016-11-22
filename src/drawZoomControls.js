@@ -1,5 +1,5 @@
 value: function(element){
-  //interaction layer  
+  //interaction layer
   if(!element){
     if(this.zoomPaper){
       element = this.zoomPaper.canvas.parentElement;
@@ -41,11 +41,22 @@ value: function(element){
     else{
       this.zoomPaper.pen.fillStyle = this.inactiveColour;
     }
-    this.zoomPaper.pen.lineWidth = 3/this.pixelMultiplier;
-    // this.zoomPaper.pen.arc((this.width / this.pixelMultiplier) - (15 / this.pixelMultiplier) - ((this.posX) / this.pixelMultiplier), (30 / this.pixelMultiplier) - ((this.posY) / this.pixelMultiplier), (12/this.pixelMultiplier), 0, Math.PI * 2);
-    this.zoomPaper.pen.arc(this.width - 15, 30, 12, 0, Math.PI * 2);
+    if(this.zoomControlBorderColour){
+      this.zoomPaper.pen.strokeStyle = this.zoomControlBorderColour;
+    }
+    this.zoomPaper.pen.lineWidth = 1/this.pixelMultiplier;
+
+    if(this.zoomControlStyle=="square"){
+      this.zoomPaper.pen.rect(this.width - 37, 28, 24, 24);
+    }
+    else{
+      this.zoomPaper.pen.arc(this.width - 25, 40, 12, 0, Math.PI * 2);
+    }
     this.zoomPaper.pen.closePath();
     this.zoomPaper.pen.fill();
+    if(this.zoomControlBorderColour){
+      this.zoomPaper.pen.stroke();
+    }
     this.zoomPaper.pen.beginPath();
     if(this.zoomLevel > this.minZoom){
       this.zoomPaper.pen.fillStyle = this.zoomControlBackgroundColour;
@@ -53,21 +64,31 @@ value: function(element){
     else{
       this.zoomPaper.pen.fillStyle = this.inactiveColour;
     }
-    this.zoomPaper.pen.lineWidth = 3/this.pixelMultiplier;
-    this.zoomPaper.pen.arc(this.width - 15, 60, 12, 0, Math.PI * 2);
+    if(this.zoomControlBorderColour){
+      this.zoomPaper.pen.strokeStyle = this.zoomControlBorderColour;
+    }
+    this.zoomPaper.pen.lineWidth = 1/this.pixelMultiplier;
+    if(this.zoomControlStyle=="square"){
+      this.zoomPaper.pen.rect(this.width - 37, 58, 24, 24);
+    }
+    else{
+      this.zoomPaper.pen.arc(this.width - 25, 70, 12, 0, Math.PI * 2);
+    }
     this.zoomPaper.pen.closePath();
     this.zoomPaper.pen.fill();
-
+    if(this.zoomControlBorderColour){
+      this.zoomPaper.pen.stroke();
+    }
     this.zoomPaper.pen.beginPath();
-    this.zoomPaper.pen.fillStyle = "white";
+    this.zoomPaper.pen.fillStyle = this.zoomControlTextColour;
     this.zoomPaper.pen.font = "16px "+this.fontFamily
     this.zoomPaper.pen.textAlign = "center";
     this.zoomPaper.pen.textBaseline = "middle";
-    this.zoomPaper.pen.fillText("+", this.width - 15, 31);
+    this.zoomPaper.pen.fillText("+", this.width - 25, 41);
     // this.zoomPaper.pen.closePath();
     // this.zoomPaper.pen.fill();
     // this.zoomPaper.pen.beginPath();
-    this.zoomPaper.pen.fillText("-", this.width - 15, 60);
+    this.zoomPaper.pen.fillText("-", this.width - 25, 69);
     this.zoomPaper.pen.closePath();
     this.zoomPaper.pen.fill();
 

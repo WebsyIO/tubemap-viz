@@ -2,6 +2,7 @@ value: function(data, element, pan){
   //create the canvas elements
   this.createCanvases(element);
   if(data && !data.target){   //data.target catches if data is an event
+    this.originalData = data;
     //reset some of the values
     this.stations = {};
     this.legend = [];

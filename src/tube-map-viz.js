@@ -10,8 +10,8 @@ this.TubeMapViz = (function(){
       })();
     }
     options = options || {};
-    this.debug = options.debug || false;
-    this.disableHighlighting = options.disableHighlighting || false;
+    this.debug = options.debug===true ? true : false;
+    this.disableHighlighting = options.disableHighlighting===true ? true : false;
     this.padding = options.padding || 30;
     this.stationRadius = options.stationRadius || 8;
     this.lineWidth = options.lineWidth || 5;
@@ -28,14 +28,18 @@ this.TubeMapViz = (function(){
     this.stationThickness = options.stationThickness || this.lineWidth;
     this.stationClicked = options.stationClicked || this.stationClicked;
     this.customLegend = options.customLegend || null;
-    this.showLegend = options.showLegend || true;
+    this.showLegend = options.showLegend===true ? true : false;
     this.legendFontSize = options.legendFontSize || this.fontSize;
     this.legendFontWeight = options.legendFontWeight || this.fontWeight;
     this.legendFontColour = options.legendFontColour || options.labelColour || "black";
     this.legendBackgroundColour = options.legendBackgroundColour || "rgba(255,255,255,0.7)";
     this.zoomControlBackgroundColour = options.zoomControlBackgroundColour || "#888";
-    this.allowZoom = options.allowZoom || true;
-    this.zoomToFit = options.zoomToFit || true;
+    this.zoomControlTextColour = options.zoomControlTextColour || "white";
+    this.zoomControlBorderColour = options.zoomControlBorderColour || null;
+    this.zoomControlPosition = options.zoomControlPosition || 3;  //top right
+    this.zoomControlStyle = options.zoomControlStyle || "round";
+    this.allowZoom = options.allowZoom===true ? true : false;
+    this.zoomToFit = options.zoomToFit===true ? true : false;
     this.colours = options.colours || [
       "#ff7373",
       "#ffd546",
@@ -213,6 +217,10 @@ this.TubeMapViz = (function(){
       writable: true,
       value: {}
     },
+    originalData:{
+      writable: true,
+      value: []
+    },
     createCanvases:{
       include "createCanvases.js"
     },
@@ -278,6 +286,12 @@ this.TubeMapViz = (function(){
     },
     render:{
       include "render.js"
+    },
+    reRender:{
+      value: function(){
+        var element = this.eventPaper.canvas.parentElement;
+        this.render(this.originalData, element);
+      }
     },
     sampleData:{
       include "sampleData.js"

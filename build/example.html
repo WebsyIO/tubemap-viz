@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html style="width: 100%; height: 100%;">
   <head>
     <meta charset="utf-8">
     <title></title>
   </head>
-  <body style="background-color: #CCC;">
-    <div id="map" class="" style="width: 800px; height: 700px; background-color: white;">
+  <body style="background-color: #CCC; width: 100%; height: 100%;">
+    <div id="map" class="" style="width: 100%; height: 100%; background-color: white;">
 
     </div>
     <script type="text/javascript" src="tube-map-viz.js"></script>
@@ -15,7 +15,14 @@
         stationThickness: 8,
         lineWidth: 8,
         lineSpacing: 8,
-        fontSize: 14
+        fontSize: 14,
+        allowZoom: true,
+        zoomToFit: true,
+        zoomControlStyle: "square",
+        zoomControlBackgroundColour: "white",
+        zoomControlTextColour: "#888",
+        zoomControlBorderColour: "#d5d2cb",
+        debug: true
       });
       map.stationClicked = function(station){
         console.log(station);
