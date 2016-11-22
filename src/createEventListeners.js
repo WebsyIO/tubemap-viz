@@ -76,7 +76,12 @@ value: function(element){
       context.beginPath();
       // context.strokeStyle = that.legendFontColour;
       context.lineWidth = 3/that.pixelMultiplier;
-      context.arc((that.width / that.pixelMultiplier) - (15 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (30 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+      if(that.zoomControlStyle=="square"){
+        context.rect((that.width / that.pixelMultiplier) - (37 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (28 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (24/that.pixelMultiplier), (24/that.pixelMultiplier));
+      }
+      else{
+        context.arc((that.width / that.pixelMultiplier) - (25 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (40 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+      }
       context.closePath();
       if(!that.panning){
         context.stroke();
@@ -90,7 +95,12 @@ value: function(element){
       this.beginRegion();
       context.beginPath();
       context.lineWidth = 3/that.pixelMultiplier;
-      context.arc((that.width / that.pixelMultiplier) - (15 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (60 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+      if(that.zoomControlStyle=="square"){
+        context.rect((that.width / that.pixelMultiplier) - (37 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (58 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (24/that.pixelMultiplier), (24/that.pixelMultiplier));
+      }
+      else{
+        context.arc((that.width / that.pixelMultiplier) - (25 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (70 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+      }
       context.closePath();
       if(!that.panning){
         context.stroke();

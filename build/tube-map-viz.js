@@ -250,8 +250,8 @@ this.TubeMapViz = (function(){
       })();
     }
     options = options || {};
-    this.debug = options.debug || false;
-    this.disableHighlighting = options.disableHighlighting || false;
+    this.debug = options.debug===true ? true : false;
+    this.disableHighlighting = options.disableHighlighting===true ? true : false;
     this.padding = options.padding || 30;
     this.stationRadius = options.stationRadius || 8;
     this.lineWidth = options.lineWidth || 5;
@@ -268,14 +268,18 @@ this.TubeMapViz = (function(){
     this.stationThickness = options.stationThickness || this.lineWidth;
     this.stationClicked = options.stationClicked || this.stationClicked;
     this.customLegend = options.customLegend || null;
-    this.showLegend = options.showLegend || true;
+    this.showLegend = options.showLegend===true ? true : false;
     this.legendFontSize = options.legendFontSize || this.fontSize;
     this.legendFontWeight = options.legendFontWeight || this.fontWeight;
     this.legendFontColour = options.legendFontColour || options.labelColour || "black";
     this.legendBackgroundColour = options.legendBackgroundColour || "rgba(255,255,255,0.7)";
     this.zoomControlBackgroundColour = options.zoomControlBackgroundColour || "#888";
-    this.allowZoom = options.allowZoom || true;
-    this.zoomToFit = options.zoomToFit || true;
+    this.zoomControlTextColour = options.zoomControlTextColour || "white";
+    this.zoomControlBorderColour = options.zoomControlBorderColour || null;
+    this.zoomControlPosition = options.zoomControlPosition || 3;  //top right
+    this.zoomControlStyle = options.zoomControlStyle || "round";
+    this.allowZoom = options.allowZoom===true ? true : false;
+    this.zoomToFit = options.zoomToFit===true ? true : false;
     this.colours = options.colours || [
       "#ff7373",
       "#ffd546",
@@ -453,6 +457,10 @@ this.TubeMapViz = (function(){
       writable: true,
       value: {}
     },
+    originalData:{
+      writable: true,
+      value: []
+    },
     createCanvases:{
       value: function(element, data){
         if(element){
@@ -461,7 +469,8 @@ this.TubeMapViz = (function(){
             if(this.debug){
               console.log('adding event listeners to element');
             }
-            element.addEventListener('resize', this.render.bind(this), false);
+            element.addEventListener('resize', this.reRender.bind(this), false);
+            window.addEventListener('resize', this.reRender.bind(this), false);
             //element.addEventListener('wheel', this.zoom.bind(this), false);
             element.addEventListener('mousedown', this.startPan.bind(this), true);
             element.addEventListener('touchstart', this.startPan.bind(this), false);
@@ -1759,7 +1768,7 @@ this.TubeMapViz = (function(){
     },
     drawZoomControls:{
       value: function(element){
-        //interaction layer  
+        //interaction layer
         if(!element){
           if(this.zoomPaper){
             element = this.zoomPaper.canvas.parentElement;
@@ -1801,11 +1810,22 @@ this.TubeMapViz = (function(){
           else{
             this.zoomPaper.pen.fillStyle = this.inactiveColour;
           }
-          this.zoomPaper.pen.lineWidth = 3/this.pixelMultiplier;
-          // this.zoomPaper.pen.arc((this.width / this.pixelMultiplier) - (15 / this.pixelMultiplier) - ((this.posX) / this.pixelMultiplier), (30 / this.pixelMultiplier) - ((this.posY) / this.pixelMultiplier), (12/this.pixelMultiplier), 0, Math.PI * 2);
-          this.zoomPaper.pen.arc(this.width - 15, 30, 12, 0, Math.PI * 2);
+          if(this.zoomControlBorderColour){
+            this.zoomPaper.pen.strokeStyle = this.zoomControlBorderColour;
+          }
+          this.zoomPaper.pen.lineWidth = 1/this.pixelMultiplier;
+
+          if(this.zoomControlStyle=="square"){
+            this.zoomPaper.pen.rect(this.width - 37, 28, 24, 24);
+          }
+          else{
+            this.zoomPaper.pen.arc(this.width - 25, 40, 12, 0, Math.PI * 2);
+          }
           this.zoomPaper.pen.closePath();
           this.zoomPaper.pen.fill();
+          if(this.zoomControlBorderColour){
+            this.zoomPaper.pen.stroke();
+          }
           this.zoomPaper.pen.beginPath();
           if(this.zoomLevel > this.minZoom){
             this.zoomPaper.pen.fillStyle = this.zoomControlBackgroundColour;
@@ -1813,21 +1833,31 @@ this.TubeMapViz = (function(){
           else{
             this.zoomPaper.pen.fillStyle = this.inactiveColour;
           }
-          this.zoomPaper.pen.lineWidth = 3/this.pixelMultiplier;
-          this.zoomPaper.pen.arc(this.width - 15, 60, 12, 0, Math.PI * 2);
+          if(this.zoomControlBorderColour){
+            this.zoomPaper.pen.strokeStyle = this.zoomControlBorderColour;
+          }
+          this.zoomPaper.pen.lineWidth = 1/this.pixelMultiplier;
+          if(this.zoomControlStyle=="square"){
+            this.zoomPaper.pen.rect(this.width - 37, 58, 24, 24);
+          }
+          else{
+            this.zoomPaper.pen.arc(this.width - 25, 70, 12, 0, Math.PI * 2);
+          }
           this.zoomPaper.pen.closePath();
           this.zoomPaper.pen.fill();
-
+          if(this.zoomControlBorderColour){
+            this.zoomPaper.pen.stroke();
+          }
           this.zoomPaper.pen.beginPath();
-          this.zoomPaper.pen.fillStyle = "white";
+          this.zoomPaper.pen.fillStyle = this.zoomControlTextColour;
           this.zoomPaper.pen.font = "16px "+this.fontFamily
           this.zoomPaper.pen.textAlign = "center";
           this.zoomPaper.pen.textBaseline = "middle";
-          this.zoomPaper.pen.fillText("+", this.width - 15, 31);
+          this.zoomPaper.pen.fillText("+", this.width - 25, 41);
           // this.zoomPaper.pen.closePath();
           // this.zoomPaper.pen.fill();
           // this.zoomPaper.pen.beginPath();
-          this.zoomPaper.pen.fillText("-", this.width - 15, 60);
+          this.zoomPaper.pen.fillText("-", this.width - 25, 69);
           this.zoomPaper.pen.closePath();
           this.zoomPaper.pen.fill();
 
@@ -1914,7 +1944,12 @@ this.TubeMapViz = (function(){
             context.beginPath();
             // context.strokeStyle = that.legendFontColour;
             context.lineWidth = 3/that.pixelMultiplier;
-            context.arc((that.width / that.pixelMultiplier) - (15 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (30 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+            if(that.zoomControlStyle=="square"){
+              context.rect((that.width / that.pixelMultiplier) - (37 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (28 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (24/that.pixelMultiplier), (24/that.pixelMultiplier));
+            }
+            else{
+              context.arc((that.width / that.pixelMultiplier) - (25 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (40 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+            }
             context.closePath();
             if(!that.panning){
               context.stroke();
@@ -1928,7 +1963,12 @@ this.TubeMapViz = (function(){
             this.beginRegion();
             context.beginPath();
             context.lineWidth = 3/that.pixelMultiplier;
-            context.arc((that.width / that.pixelMultiplier) - (15 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (60 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+            if(that.zoomControlStyle=="square"){
+              context.rect((that.width / that.pixelMultiplier) - (37 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (58 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (24/that.pixelMultiplier), (24/that.pixelMultiplier));
+            }
+            else{
+              context.arc((that.width / that.pixelMultiplier) - (25 / that.pixelMultiplier) - ((that.posX) / that.pixelMultiplier), (70 / that.pixelMultiplier) - ((that.posY) / that.pixelMultiplier), (12/that.pixelMultiplier), 0, Math.PI * 2);
+            }
             context.closePath();
             if(!that.panning){
               context.stroke();
@@ -1968,6 +2008,7 @@ this.TubeMapViz = (function(){
         //create the canvas elements
         this.createCanvases(element);
         if(data && !data.target){   //data.target catches if data is an event
+          this.originalData = data;
           //reset some of the values
           this.stations = {};
           this.legend = [];
@@ -2043,6 +2084,12 @@ this.TubeMapViz = (function(){
         this.drawZoomControls(element);
       }
 
+    },
+    reRender:{
+      value: function(){
+        var element = this.eventPaper.canvas.parentElement;
+        this.render(this.originalData, element);
+      }
     },
     sampleData:{
       value: [
