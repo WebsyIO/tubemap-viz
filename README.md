@@ -1,16 +1,16 @@
 # tubemap-viz
-###An HTML5 Canvas based visualisation that lets you represent data in the style of a Tube/Metro map.
+### An HTML5 Canvas based visualisation that lets you represent data in the style of a Tube/Metro map.
 The map is a work in progress but feel free to use, abuse and contribute. Enjoy.
 
-#####Example:
+##### Example:
 ![alt text](Example.png "Example Map")
-####Setup
+#### Setup
 Load the TubeMapViz library into your webpage
 ```html
 <script src='https://rawgit.com/websy85/tubemap-viz/master/build/tube-map-viz.js'></script>
 ```
 
-####Example Usage
+#### Example Usage
 Create an element to use as the map parent
 ```html
 <div id="mapContainer" style="width:800; height:600px;"></div>
@@ -23,7 +23,7 @@ Using the sample data provided, call the render() function to draw the map
 ```javascript
 myTubeMap.render(myTubeMap.sampleData, document.getElementById("mapContainer"));
 ```
-####Data Structure
+#### Data Structure
 The data expected by the map is an array of objects structured like this
 ```javascript
 {
@@ -46,7 +46,7 @@ The data expected by the map is an array of objects structured like this
   ]
 }
 ```
-####Options
+#### Options
 When creating a new instance of TubeMapViz a configuration object can be passed in.
 ```javascript
 var options = {
@@ -95,7 +95,7 @@ The following is a list of available options
   "zoomToFit": Boolean //defaults to true. only active if allowZoom is also true;
 }
 ```
-####Methods
+#### Methods
 ```javascript
 stationClicked: function(station){
   //allows you to add custom behaviour to the stationClicked event
@@ -107,7 +107,7 @@ stationClicked: function(station){
   } 
 }
 ```
-####Rendering Logic
+#### Rendering Logic
 *To calculate station positions a virtual grid is created where the size of a cell is equal to 2 * stationRadius
 *Lines are drawn in the same order they are provided
 *Lines will always draw from left to right
